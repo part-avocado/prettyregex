@@ -4,13 +4,13 @@ A simplified syntax for creating regular expressions with human-readable pattern
 
 ## Features
 
-- **Human-readable syntax**: Use words like `charU`, `charL`, `0-9` instead of cryptic regex symbols
+- **Human-readable syntax**: Use words like `charU`, `charL`, `0-9` instead of regex symbols
 - **Comprehensive character classes**: Built-in shortcuts for common patterns
 - **Advanced regex features**: Lookaheads, lookbehinds, Unicode support, and more
 - **TypeScript support**: Full type definitions included
 - **Zero dependencies**: Lightweight and fast
 - **Common patterns**: Pre-built patterns for emails, URLs, phone numbers, etc.
-- **Error handling**: Clear error messages with position information
+- **Error handling**: Graceful error handing with position information
 
 ## Installation
 
