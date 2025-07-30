@@ -23,15 +23,25 @@ npm install pretty-regex
 ```javascript
 const PrettyRegex = require('pretty-regex');
 
-// Your example: Email validation
-const emailPattern = '[charU+charL+0-9+char(.)+char(_)+char(%)+char(+)+char(-)]+char(@)[charU+charL+0-9+char(.)+char(-)]+char(.)[charL]{2,}';
+// Basic usage
+const emailPattern = '[charU+charL+0-9]+char(@)[charU+charL+0-9]+char(.)[charL]{2,}';
 const emailRegex = PrettyRegex.compile(emailPattern);
-
 console.log(emailRegex.test('user@example.com')); // true
-console.log(emailRegex.test('invalid.email')); // false
 
-// Or use the static method
-console.log(PrettyRegex.test(emailPattern, 'test@domain.org')); // true
+// With validation and error handling
+const prx = new PrettyRegex({
+  validatePatterns: true,
+  throwOnError: true,
+  logWarnings: true
+});
+
+try {
+  const regex = prx.compile('[charU&charL&0-9]{8,}');
+  console.log('Strong password pattern compiled successfully');
+} catch (error) {
+  console.log('Validation error:', error.message);
+  console.log('Suggestion:', error.details.suggestion);
+}
 ```
 
 ## Syntax Guide
@@ -43,7 +53,6 @@ console.log(PrettyRegex.test(emailPattern, 'test@domain.org')); // true
 | `charU` | `[A-Z]` | Uppercase letters |
 | `charL` | `[a-z]` | Lowercase letters |
 | `char` | `[a-zA-Z]` | Any letter |
-| `0-9` | `[0-9]` | Digits |
 | `digit` | `[0-9]` | Digits (alternative) |
 | `space` | ` ` | Literal space |
 | `tab` | `\t` | Tab character |
@@ -158,9 +167,76 @@ const pattern = '[charUcharL0-9]';  // Same as [charU+charL+0-9] - union behavio
 // This is the traditional way without explicit + operator
 ```
 
-## Examples
+## 🛠️ Production Features
 
-### Basic Patterns
+### Error Handling & Validation
+
+Pretty RegEx provides comprehensive error handling and validation:
+
+```javascript
+const prx = new PrettyRegex({
+  validatePatterns: true,  // Enable pattern validation
+  throwOnError: true,      // Throw errors on validation failures
+  logWarnings: true        // Log performance warnings
+});
+
+// Validate patterns before compilation
+const validation = prx.validate('[charU+charL]');
+if (!validation.isValid) {
+  console.log('Errors:', validation.errors.map(e => e.message));
+  console.log('Warnings:', validation.warnings.map(w => w.message));
+}
+```
+
+### Debug Utilities
+
+Debug patterns to understand compilation:
+
+```javascript
+const debugInfo = PrettyRegex.debug('[charU&charL&0-9]{8,}');
+console.log(debugInfo);
+// {
+//   original: '[charU&charL&0-9]{8,}',
+//   parsed: '(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[A-Za-z0-9]{8,}',
+//   compiled: '/(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[A-Za-z0-9]{8,}/',
+//   validation: { isValid: true, errors: [], warnings: [] },
+//   suggestions: [],
+//   isValid: true
+// }
+```
+
+### Performance Suggestions
+
+Get suggestions for optimizing patterns:
+
+```javascript
+const suggestions = PrettyRegex.getSuggestions('[ABCDEFGHIJKLMNOPQRSTUVWXYZ]+');
+console.log(suggestions);
+// ['Consider using charU instead of [ABCDEFGHIJKLMNOPQRSTUVWXYZ]']
+```
+
+### Static Methods
+
+Use static methods for quick operations:
+
+```javascript
+// Quick test
+const isValid = PrettyRegex.test('[charU+charL]+', 'Hello'); // true
+
+// Quick match
+const matches = PrettyRegex.match('[charU]+', 'Hello World'); // ['H', 'W']
+
+// Quick replace
+const replaced = PrettyRegex.replace('[charU]', 'Hello World', 'X'); // 'Xello Xorld'
+
+// Quick validation
+const validation = PrettyRegex.validate('[charU+charL]');
+
+// Quick debug
+const debug = PrettyRegex.debug('[0-9]+');
+```
+
+## Examples
 
 ```javascript
 const PrettyRegex = require('pretty-regex');

@@ -6,26 +6,50 @@
   "types": "src/index.d.ts",
   "scripts": {
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "build": "node build.js",
-    "dev": "node examples/demo.js"
+    "dev": "node examples/demo.js",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "prepublishOnly": "npm test && npm run lint"
   },
-  "keywords": ["regex", "regular-expression", "pattern", "parsing", "validation"],
-  "author": "Your Name",
+  "keywords": [
+    "regex", 
+    "regular-expression", 
+    "pattern", 
+    "parsing", 
+    "validation",
+    "human-readable",
+    "simplified",
+    "syntax",
+    "compiler"
+  ],
+  "author": "Pretty RegEx Team",
   "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "devDependencies": {
-    "jest": "^29.0.0"
+    "jest": "^29.0.0",
+    "eslint": "^8.0.0"
   },
   "files": [
     "src/",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/pretty-regex.git"
+    "url": "https://github.com/prettyregex/pretty-regex.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/pretty-regex/issues"
+    "url": "https://github.com/prettyregex/pretty-regex/issues"
   },
-  "homepage": "https://github.com/yourusername/pretty-regex#readme"
+  "homepage": "https://github.com/prettyregex/pretty-regex#readme",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/prettyregex"
+  }
 } 

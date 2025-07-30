@@ -2,9 +2,14 @@ const PrettyRegex = require('../src/index');
 
 describe('PrettyRegex Basic Functionality', () => {
   let prx;
-
+  
   beforeEach(() => {
-    prx = new PrettyRegex();
+    // Create instance with warnings disabled for tests
+    prx = new PrettyRegex({
+      validatePatterns: true,
+      throwOnError: true,
+      logWarnings: false // Disable warnings during tests
+    });
   });
 
   describe('Character Classes', () => {

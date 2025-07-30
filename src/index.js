@@ -1,34 +1,14 @@
-/**
- * Pretty RegEx - A simplified syntax for creating regular expressions
- * 
- * Syntax Guide:
- * - charU: Uppercase letters [A-Z]
- * - charL: Lowercase letters [a-z]
- * - char: Any letter [a-zA-Z]
- * - 0-9: Digits [0-9]
- * - char(x): Literal character x
- * - +: One or more
- * - *: Zero or more
- * - ?: Zero or one
- * - {n}: Exactly n times
- * - {n,m}: Between n and m times
- * - |: OR operator
- * - (): Grouping
- * - []: Character class
- * - @: At symbol (literal @)
- * - .: Dot (literal .)
- * - -: Dash (literal -)
- * - space: Literal space
- * - tab: Literal tab
- * - newline: Literal newline
- * - start: Start of string (^)
- * - end: End of string ($)
- * - word: Word boundary (\b)
- * - notword: Non-word boundary (\B)
- */
+const { 
+  ParseError, 
+  ValidationError, 
+  RangeError, 
+  QuantifierError, 
+  CharacterClassError 
+} = require('./errors');
+const PatternValidator = require('./validator');
 
 class PrettyRegex {
-  constructor() {
+  constructor(options = {}) {
     this.charClasses = {
       'charU': '[A-Z]',
       'charL': '[a-z]',
@@ -54,17 +34,62 @@ class PrettyRegex {
       '*': '*',
       '?': '?'
     };
+
+    // Initialize validator
+    this.validator = new PatternValidator();
+    
+    // Configuration options
+    this.options = {
+      validatePatterns: options.validatePatterns !== false, // Default to true
+      throwOnError: options.throwOnError !== false, // Default to true
+      logWarnings: options.logWarnings !== false, // Default to true
+      ...options
+    };
   }
 
   /**
    * Parse PRX syntax and convert to regular expression
-   * @param {string} prxPattern - The Pretty RegEx pattern
-   * @param {string} flags - RegExp flags (g, i, m, etc.)
-   * @returns {RegExp} - The compiled regular expression
+   * @param {string} prxPattern     The Pretty RegEx pattern
+   * @param {string} flags          RegExp flags (g, i, m, etc.)
+   * @returns {RegExp}              The compiled regular expression
    */
   compile(prxPattern, flags = '') {
-    const regexPattern = this.parse(prxPattern);
-    return new RegExp(regexPattern, flags);
+    try {
+      // Validate pattern if enabled
+      if (this.options.validatePatterns) {
+        const validation = this.validator.validate(prxPattern);
+        
+        if (!validation.isValid) {
+          const errorMessage = validation.errors.map(e => e.message).join('; ');
+          if (this.options.throwOnError) {
+            throw new ValidationError(
+              `Pattern validation failed: ${errorMessage}`,
+              prxPattern,
+              validation.errors[0]?.details?.suggestion || ''
+            );
+          }
+        }
+        
+        // Log warnings if enabled
+        if (this.options.logWarnings && validation.warnings.length > 0) {
+          console.warn('Pretty RegEx warnings:', validation.warnings.map(w => w.message));
+        }
+      }
+
+      const regexPattern = this.parse(prxPattern);
+      return new RegExp(regexPattern, flags);
+    } catch (error) {
+      if (error instanceof ValidationError || error instanceof ParseError) {
+        throw error;
+      }
+      
+      // Wrap unexpected errors
+      throw new ParseError(
+        `Failed to compile pattern: ${error.message}`,
+        0,
+        prxPattern
+      );
+    }
   }
 
   /**
@@ -83,7 +108,10 @@ class PrettyRegex {
       if (char === '[') {
         const classEnd = prxPattern.indexOf(']', i);
         if (classEnd === -1) {
-          throw new Error('Unclosed character class at position ' + i);
+          throw new CharacterClassError(
+            'Unclosed character class',
+            prxPattern.substring(i)
+          );
         }
         
         const classContent = prxPattern.substring(i + 1, classEnd);
@@ -96,7 +124,11 @@ class PrettyRegex {
       if (prxPattern.substring(i).startsWith('char(')) {
         const closeParenIndex = prxPattern.indexOf(')', i + 5);
         if (closeParenIndex === -1) {
-          throw new Error('Unclosed char() at position ' + i);
+          throw new ParseError(
+            'Unclosed char() literal',
+            i,
+            prxPattern.substring(i, i + 10)
+          );
         }
         
         const literalChar = prxPattern.substring(i + 5, closeParenIndex);
@@ -114,7 +146,10 @@ class PrettyRegex {
       if (char === '{') {
         const closeIndex = prxPattern.indexOf('}', i);
         if (closeIndex === -1) {
-          throw new Error('Unclosed quantifier at position ' + i);
+          throw new QuantifierError(
+            'Unclosed quantifier',
+            prxPattern.substring(i, i + 10)
+          );
         }
         
         const quantifier = prxPattern.substring(i, closeIndex + 1);
@@ -464,17 +499,41 @@ class PrettyRegex {
     
     // Check if both are digits
     if (/^\d$/.test(startChar) && /^\d$/.test(endChar)) {
-      return parseInt(startChar) <= parseInt(endChar);
+      const isValid = parseInt(startChar) <= parseInt(endChar);
+      if (!isValid) {
+        throw new RangeError(
+          `Invalid numeric range '${startChar}-${endChar}': start digit '${startChar}' is greater than end digit '${endChar}'`,
+          startChar,
+          endChar
+        );
+      }
+      return true;
     }
     
     // Check if both are lowercase letters
     if (/^[a-z]$/.test(startChar) && /^[a-z]$/.test(endChar)) {
-      return startChar <= endChar;
+      const isValid = startChar <= endChar;
+      if (!isValid) {
+        throw new RangeError(
+          `Invalid lowercase range '${startChar}-${endChar}': start letter '${startChar}' comes after end letter '${endChar}'`,
+          startChar,
+          endChar
+        );
+      }
+      return true;
     }
     
     // Check if both are uppercase letters
     if (/^[A-Z]$/.test(startChar) && /^[A-Z]$/.test(endChar)) {
-      return startChar <= endChar;
+      const isValid = startChar <= endChar;
+      if (!isValid) {
+        throw new RangeError(
+          `Invalid uppercase range '${startChar}-${endChar}': start letter '${startChar}' comes after end letter '${endChar}'`,
+          startChar,
+          endChar
+        );
+      }
+      return true;
     }
     
     // For mixed case ranges, we need to handle them specially
@@ -491,7 +550,15 @@ class PrettyRegex {
     if (startLower !== endLower && 
         ((startChar === startLower && endChar !== endLower) || 
          (startChar !== startLower && endChar === endLower))) {
-      return startLower <= endLower;
+      const isValid = startLower <= endLower;
+      if (!isValid) {
+        throw new RangeError(
+          `Invalid mixed case range '${startChar}-${endChar}': start letter '${startLower}' comes after end letter '${endLower}'`,
+          startChar,
+          endChar
+        );
+      }
+      return true;
     }
     
     return false;
@@ -558,6 +625,67 @@ class PrettyRegex {
     const regex = this.compile(prxPattern, flags);
     return testString.replace(regex, replacement);
   }
+
+  /**
+   * Validate a pattern and return detailed results
+   * @param {string} pattern - The pattern to validate
+   * @returns {Object} - Validation result with errors, warnings, and suggestions
+   */
+  validate(pattern) {
+    return this.validator.validate(pattern);
+  }
+
+  /**
+   * Get suggestions for improving a pattern
+   * @param {string} pattern - The pattern to analyze
+   * @returns {Array} - Array of suggestions
+   */
+  getSuggestions(pattern) {
+    return this.validator.getSuggestions(pattern);
+  }
+
+  /**
+   * Debug a pattern by showing the compilation steps
+   * @param {string} pattern - The pattern to debug
+   * @returns {Object} - Debug information
+   */
+  debug(pattern) {
+    try {
+      const validation = this.validator.validate(pattern);
+      const parsed = this.parse(pattern);
+      const compiled = new RegExp(parsed);
+      
+      return {
+        original: pattern,
+        parsed: parsed,
+        compiled: compiled.toString(),
+        validation: validation,
+        suggestions: this.validator.getSuggestions(pattern),
+        isValid: validation.isValid && compiled.toString() !== '/(?:)/'
+      };
+    } catch (error) {
+      return {
+        original: pattern,
+        error: error.message,
+        isValid: false
+      };
+    }
+  }
+
+  /**
+   * Get information about supported features
+   * @returns {Object} - Feature information
+   */
+  getFeatures() {
+    return {
+      characterClasses: Object.keys(this.charClasses),
+      quantifiers: Object.keys(this.quantifiers),
+      operators: ['&', '+', '|'],
+      anchors: ['start', 'end', 'word', 'notword'],
+      literals: ['char()', 'space', 'tab', 'newline'],
+      ranges: 'Supports numeric and character ranges (e.g., [0-9], [a-z], [a-E])'
+    };
+  }
 }
 
 // Static methods for convenience
@@ -579,6 +707,26 @@ PrettyRegex.match = function(prxPattern, testString, flags) {
 PrettyRegex.replace = function(prxPattern, testString, replacement, flags) {
   const instance = new PrettyRegex();
   return instance.replace(prxPattern, testString, replacement, flags);
+};
+
+PrettyRegex.validate = function(pattern) {
+  const instance = new PrettyRegex();
+  return instance.validate(pattern);
+};
+
+PrettyRegex.debug = function(pattern) {
+  const instance = new PrettyRegex();
+  return instance.debug(pattern);
+};
+
+PrettyRegex.getSuggestions = function(pattern) {
+  const instance = new PrettyRegex();
+  return instance.getSuggestions(pattern);
+};
+
+PrettyRegex.getFeatures = function() {
+  const instance = new PrettyRegex();
+  return instance.getFeatures();
 };
 
 module.exports = PrettyRegex; 
