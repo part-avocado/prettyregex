@@ -14,11 +14,12 @@ A simplified syntax for creating regular expressions with human-readable pattern
 
 ## Installation
 
+(NOT YET PUBLISHED)
 ```bash
 npm install pretty-regex
 ```
 
-## 🎯 Quick Start
+## Quick Start
 
 ```javascript
 const PrettyRegex = require('pretty-regex');
@@ -72,8 +73,6 @@ You can use traditional character ranges inside square brackets:
 | `[a-e]` | `[a-e]` | Lowercase letters a through e |
 | `[A-E]` | `[A-E]` | Uppercase letters A through E |
 | `[a-E]` | `[a-eA-E]` | Mixed case range (a-e and A-E) |
-| `[a-z]` | `[a-z]` | All lowercase letters |
-| `[A-Z]` | `[A-Z]` | All uppercase letters |
 
 **Note**: Ranges must be in ascending order (e.g., `[0-9]` works, `[9-0]` doesn't).
 
@@ -167,7 +166,7 @@ const pattern = '[charUcharL0-9]';  // Same as [charU+charL+0-9] - union behavio
 // This is the traditional way without explicit + operator
 ```
 
-## 🛠️ Production Features
+## Advanced Features
 
 ### Error Handling & Validation
 
@@ -254,7 +253,7 @@ const url = 'char(h)char(t)char(t)char(p)char(s)?char(:)char(/)char(/)[charU+cha
 console.log(PrettyRegex.test(url, 'https://example.com')); // true
 ```
 
-### MUST Requirements Examples
+### MUST (&) Requirements Examples
 
 ```javascript
 // Strong password: MUST contain uppercase, lowercase, digits, and special chars
@@ -308,7 +307,7 @@ console.log(PrettyRegex.test(dateOrTime, '2023-12-25')); // true
 console.log(PrettyRegex.test(dateOrTime, '14:30')); // true
 ```
 
-### Your Email Example Explained
+### Email Example
 
 ```javascript
 // Two approaches for email validation:
@@ -355,7 +354,7 @@ emails.forEach(email => {
 });
 ```
 
-## 🔬 Advanced Features
+## Advanced Features 2.0
 
 For complex patterns, use the `AdvancedPrettyRegex` class:
 
@@ -486,18 +485,17 @@ The package includes comprehensive tests for:
 6. Push to branch: `git push origin feature-name`
 7. Submit a pull request
 
-## Roadmap
+## Next Steps
 
-- [ ] Interactive pattern builder web tool
 - [ ] More built-in patterns (credit cards, addresses, etc.)
 - [ ] Performance optimizations
 - [ ] Browser compatibility testing
-- [ ] Plugin system for custom patterns
-- [ ] Visual regex debugger
+- [ ] String matching (similar to char(), but for strings)
+- [ ] Publish to NPM
 
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details
 
-Inspired by the need for human-readable regex patterns and built with ❤️ for developers who find regex intimidating.
-Special thanks to the regex community for pattern inspirations
+Inspired by the need for human-readable regex patterns and for developers who find regex intimidating.
+Special thanks to the regex community for creating aa pain in my ass.
