@@ -53,6 +53,89 @@ describe('PrettyRegex Basic Functionality', () => {
       expect(regex.test('Abc')).toBe(true);     // Contains only allowed chars
       expect(regex.test('Test@123')).toBe(false); // Contains @ which is not allowed
     });
+
+    test('should handle numeric ranges correctly', () => {
+      const pattern = 'start[0-2]+end';
+      const regex = prx.compile(pattern);
+      expect(regex.test('012')).toBe(true);     // All digits in range
+      expect(regex.test('120')).toBe(true);     // All digits in range
+      expect(regex.test('123')).toBe(false);    // Contains 3 which is out of range
+      expect(regex.test('045')).toBe(false);    // Contains 4 and 5 which are out of range
+      expect(regex.test('0')).toBe(true);       // Single digit in range
+      expect(regex.test('2')).toBe(true);       // Single digit in range
+    });
+
+    test('should handle character ranges correctly', () => {
+      const pattern = 'start[a-e]+end';
+      const regex = prx.compile(pattern);
+      expect(regex.test('abcde')).toBe(true);   // All letters in range
+      expect(regex.test('cba')).toBe(true);     // All letters in range
+      expect(regex.test('abcdef')).toBe(false); // Contains f which is out of range
+      expect(regex.test('ABCDE')).toBe(false);  // Uppercase not in range
+      expect(regex.test('a')).toBe(true);       // Single letter in range
+      expect(regex.test('e')).toBe(true);       // Single letter in range
+    });
+
+    test('should handle mixed case ranges correctly', () => {
+      const pattern = 'start[a-E]+end';
+      const regex = prx.compile(pattern);
+      expect(regex.test('abcde')).toBe(true);   // Lowercase letters in range
+      expect(regex.test('ABCDE')).toBe(true);   // Uppercase letters in range
+      expect(regex.test('aBcDe')).toBe(true);   // Mixed case letters in range
+      expect(regex.test('abcdef')).toBe(false); // Contains f which is out of range
+      expect(regex.test('ABCDEF')).toBe(false); // Contains F which is out of range
+    });
+
+    test('should handle ranges with MUST requirements', () => {
+      const pattern = '[0-2&charU]+';
+      const regex = prx.compile(pattern);
+      expect(regex.test('A1')).toBe(true);      // Has digit 0-2 AND uppercase
+      expect(regex.test('B2')).toBe(true);      // Has digit 0-2 AND uppercase
+      expect(regex.test('a1')).toBe(false);     // Missing uppercase
+      expect(regex.test('A3')).toBe(false);     // Missing digit 0-2
+      expect(regex.test('X1')).toBe(true);      // Has digit 0-2 AND uppercase
+    });
+
+    test('should handle ranges with union requirements', () => {
+      const pattern = 'start[a-E+0-9]+end';
+      const regex = prx.compile(pattern);
+      expect(regex.test('a1')).toBe(true);      // Contains a-E OR digit
+      expect(regex.test('B2')).toBe(true);      // Contains a-E OR digit
+      expect(regex.test('c9')).toBe(true);      // Contains a-E OR digit
+      expect(regex.test('E1')).toBe(true);      // Contains a-E OR digit
+      expect(regex.test('f5')).toBe(false);     // Contains f which is not in a-E
+    });
+
+    test('should handle + operator precedence correctly', () => {
+      // + as quantifier outside character class
+      const quantifierPattern = 'char+';
+      const quantifierRegex = prx.compile(quantifierPattern);
+      expect(quantifierRegex.test('a')).toBe(true);
+      expect(quantifierRegex.test('abc')).toBe(true);
+      expect(quantifierRegex.test('123')).toBe(false);
+
+      // + as union operator inside character class
+      const unionPattern = '[charU+charL]';
+      const unionRegex = prx.compile(unionPattern);
+      expect(unionRegex.test('A')).toBe(true);
+      expect(unionRegex.test('a')).toBe(true);
+      expect(unionRegex.test('1')).toBe(false);
+
+      // + as both union inside and quantifier outside
+      const combinedPattern = '[charU+charL]+';
+      const combinedRegex = prx.compile(combinedPattern);
+      expect(combinedRegex.test('ABC')).toBe(true);
+      expect(combinedRegex.test('abc')).toBe(true);
+      expect(combinedRegex.test('AbC')).toBe(true);
+      expect(combinedRegex.test('123')).toBe(false);
+
+      // + with ranges
+      const rangePattern = '[0-2+charU]+';
+      const rangeRegex = prx.compile(rangePattern);
+      expect(rangeRegex.test('A1')).toBe(true);
+      expect(rangeRegex.test('B2')).toBe(true);
+      expect(rangeRegex.test('3')).toBe(false);
+    });
   });
 
   describe('Literal Characters', () => {

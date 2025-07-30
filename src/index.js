@@ -391,6 +391,31 @@ class PrettyRegex {
         continue;
       }
       
+      // Handle character ranges (e.g., 0-9, a-z, A-Z)
+      if (i + 2 < requirement.length && requirement[i + 1] === '-') {
+        const startChar = requirement[i];
+        const endChar = requirement[i + 2];
+        
+        // Validate range (both characters should be of the same type)
+        if (this.isValidRange(startChar, endChar)) {
+          // Handle mixed case ranges like a-E
+          if (this.isMixedCaseRange(startChar, endChar)) {
+            // For mixed case ranges, create a range that includes both cases
+            const startLower = startChar.toLowerCase();
+            const endLower = endChar.toLowerCase();
+            const rangeStr = startLower + '-' + endLower + startChar.toUpperCase() + '-' + endChar.toUpperCase();
+            lookaheadClass = '[' + rangeStr + ']';
+            charClassParts.push(rangeStr);
+          } else {
+            const rangeStr = startChar + '-' + endChar;
+            lookaheadClass = '[' + rangeStr + ']';
+            charClassParts.push(rangeStr);
+          }
+          i += 3; // Skip start, -, and end characters
+          continue;
+        }
+      }
+      
       // Handle other characters
       const escaped = this.escapeInCharClass(requirement[i]);
       lookaheadClass = escaped;
@@ -439,17 +464,17 @@ class PrettyRegex {
     
     // Check if both are digits
     if (/^\d$/.test(startChar) && /^\d$/.test(endChar)) {
-      return true;
+      return parseInt(startChar) <= parseInt(endChar);
     }
     
     // Check if both are lowercase letters
     if (/^[a-z]$/.test(startChar) && /^[a-z]$/.test(endChar)) {
-      return true;
+      return startChar <= endChar;
     }
     
     // Check if both are uppercase letters
     if (/^[A-Z]$/.test(startChar) && /^[A-Z]$/.test(endChar)) {
-      return true;
+      return startChar <= endChar;
     }
     
     // For mixed case ranges, we need to handle them specially
@@ -466,7 +491,7 @@ class PrettyRegex {
     if (startLower !== endLower && 
         ((startChar === startLower && endChar !== endLower) || 
          (startChar !== startLower && endChar === endLower))) {
-      return true;
+      return startLower <= endLower;
     }
     
     return false;

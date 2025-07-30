@@ -52,11 +52,41 @@ console.log(PrettyRegex.test(emailPattern, 'test@domain.org')); // true
 | `wordchar` | `\w` | Word characters |
 | `any` | `.` | Any character |
 
+### Character Ranges
+
+You can use traditional character ranges inside square brackets:
+
+| PRX Syntax | Regex Equivalent | Description |
+|------------|------------------|-------------|
+| `[0-2]` | `[0-2]` | Digits 0, 1, 2 |
+| `[5-9]` | `[5-9]` | Digits 5, 6, 7, 8, 9 |
+| `[a-e]` | `[a-e]` | Lowercase letters a through e |
+| `[A-E]` | `[A-E]` | Uppercase letters A through E |
+| `[a-E]` | `[a-eA-E]` | Mixed case range (a-e and A-E) |
+| `[a-z]` | `[a-z]` | All lowercase letters |
+| `[A-Z]` | `[A-Z]` | All uppercase letters |
+
+**Note**: Ranges must be in ascending order (e.g., `[0-9]` works, `[9-0]` doesn't).
+
+### Operator Precedence
+
+The `+` character has different meanings based on context:
+- **Outside character classes**: `+` is a **quantifier** (one or more)
+- **Inside character classes**: `+` is a **union operator** (OR)
+
+Examples:
+```javascript
+'char+'           // Quantifier: one or more letters
+'[charU+charL]'   // Union: uppercase OR lowercase
+'[charU+charL]+'  // Union inside + quantifier outside = one or more letters
+'[0-2+charU]+'    // Range + union + quantifier = one or more digits 0-2 OR uppercase
+```
+
 ### Quantifiers
 
 | PRX Syntax | Regex Equivalent | Description |
 |------------|------------------|-------------|
-| `+` | `+` | One or more |
+| `+` | `+` | One or more (quantifier) |
 | `*` | `*` | Zero or more |
 | `?` | `?` | Zero or one |
 | `{3}` | `{3}` | Exactly 3 times |
@@ -94,6 +124,11 @@ const pattern = '[charU&charL&0-9]';
 
 const strongPassword = '[charU&charL&0-9&char(!)]{8,}';
 // Password MUST contain uppercase, lowercase, digits, and exclamation mark
+
+// Using ranges with MUST requirements
+const digitRange = '[0-2&charU]+';
+// MUST contain digits 0-2 AND uppercase letters
+// Examples: "A1" ✅, "B2" ✅, "a1" ❌ (missing uppercase), "A3" ❌ (3 not in range)
 ```
 
 #### AND/OR Union (`+` operator)
@@ -107,6 +142,11 @@ const pattern = '[charU+charL+0-9]';
 
 const emailPart = '[charU+charL+0-9+char(.)+char(-)]';
 // May only contain letters, numbers, dots, and dashes
+
+// Using ranges with Union requirements
+const mixedRange = '[a-E+0-9]+';
+// May only contain letters a-E (both cases) OR digits
+// Examples: "a1" ✅, "B2" ✅, "c9" ✅, "f5" ❌ (f not in a-E range)
 ```
 
 #### Simple Character Classes
