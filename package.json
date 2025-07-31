@@ -202,7 +202,7 @@
     "pkg-dir": "^4.2.0",
     "pretty-format": "^29.7.0",
     "prompts": "^2.4.2",
-    "pure-rand": "^6.1.0",
+    "pure-rand": "^7.0.1",
     "react-is": "^18.3.1",
     "require-directory": "^2.1.1",
     "resolve": "^1.22.10",
