@@ -12,7 +12,10 @@
     "dev": "node examples/demo.js",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "prepublishOnly": "npm test && npm run lint"
+    "prepublishOnly": "npm test && npm run lint",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major"
   },
   "keywords": [
     "regex",

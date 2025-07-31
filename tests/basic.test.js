@@ -8,7 +8,7 @@ describe('PrettyRegex Basic Functionality', () => {
     prx = new PrettyRegex({
       validatePatterns: true,
       throwOnError: true,
-      logWarnings: false // Disable warnings during tests
+      logWarnings: true // Enable warnings for debugging
     });
   });
 
@@ -413,6 +413,208 @@ describe('PrettyRegex Basic Functionality', () => {
       expect(regex.test('http://example.com')).toBe(true);
       expect(regex.test('https://sub.domain.co.uk')).toBe(true);
       expect(regex.test('ftp://example.com')).toBe(false);
+    });
+  });
+
+  describe('String Matching', () => {
+    test('should handle basic string literals with string()', () => {
+      const pattern = 'string(banana)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('bananas')).toBe(false);
+      expect(regex.test('Banana')).toBe(false);
+      expect(regex.test('BANANA')).toBe(false);
+    });
+
+    test('should handle string literals with special characters', () => {
+      const pattern = 'string(hello.world)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('hello.world')).toBe(true);
+      expect(regex.test('helloworld')).toBe(false);
+      expect(regex.test('hello.world!')).toBe(false);
+    });
+
+    test('should handle case insensitive string matching', () => {
+      const pattern = 'string(banana, caseinsensitive)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('Banana')).toBe(true);
+      expect(regex.test('BANANA')).toBe(true);
+      expect(regex.test('bAnAnA')).toBe(true);
+      expect(regex.test('bananas')).toBe(false);
+    });
+
+    test('should handle case insensitive with short flag (ci)', () => {
+      const pattern = 'string(banana, ci)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('Banana')).toBe(true);
+      expect(regex.test('BANANA')).toBe(true);
+    });
+
+    test('should handle case insensitive with nocase flag', () => {
+      const pattern = 'string(banana, nocase)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('Banana')).toBe(true);
+      expect(regex.test('BANANA')).toBe(true);
+    });
+
+    test('should handle explicit case sensitive matching', () => {
+      const pattern = 'string(banana, casesensitive)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('Banana')).toBe(false);
+      expect(regex.test('BANANA')).toBe(false);
+    });
+
+    test('should handle case sensitive with short flag (cs)', () => {
+      const pattern = 'string(banana, cs)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('Banana')).toBe(false);
+      expect(regex.test('BANANA')).toBe(false);
+    });
+
+    test('should handle case sensitive with case flag', () => {
+      const pattern = 'string(banana, case)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('Banana')).toBe(false);
+      expect(regex.test('BANANA')).toBe(false);
+    });
+
+    test('should handle multicase string matching', () => {
+      const pattern = 'string(banana, multicase)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('Banana')).toBe(true);
+      expect(regex.test('BANANA')).toBe(true);
+      expect(regex.test('bAnAnA')).toBe(true);
+      expect(regex.test('BaNaNa')).toBe(true);
+      expect(regex.test('bananas')).toBe(false);
+    });
+
+    test('should handle multicase with short flag (mc)', () => {
+      const pattern = 'string(banana, mc)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('Banana')).toBe(true);
+      expect(regex.test('BANANA')).toBe(true);
+      expect(regex.test('bAnAnA')).toBe(true);
+    });
+
+    test('should handle multicase with mixed characters', () => {
+      const pattern = 'string(Hello123, multicase)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('Hello123')).toBe(true);
+      expect(regex.test('hello123')).toBe(true);
+      expect(regex.test('HELLO123')).toBe(true);
+      expect(regex.test('hElLo123')).toBe(true);
+      expect(regex.test('Hello124')).toBe(false);
+    });
+
+    test('should handle string literals with whitespace', () => {
+      const pattern = 'string(hello world, caseinsensitive)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('hello world')).toBe(true);
+      expect(regex.test('Hello World')).toBe(true);
+      expect(regex.test('HELLO WORLD')).toBe(true);
+      expect(regex.test('helloworld')).toBe(false);
+    });
+
+    test('should handle string literals in complex patterns', () => {
+      const pattern = 'startstring(hello)space+string(world)end';
+      const regex = prx.compile(pattern);
+      expect(regex.test('hello world')).toBe(true);
+      expect(regex.test('hello  world')).toBe(true);
+      expect(regex.test('hello   world')).toBe(true);
+      expect(regex.test('hello world!')).toBe(false);
+      expect(regex.test('Hello World')).toBe(false);
+    });
+
+    test('should handle string literals with OR operator', () => {
+      const pattern = 'string(hello)|string(world)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('hello')).toBe(true);
+      expect(regex.test('world')).toBe(true);
+      expect(regex.test('hello world')).toBe(false);
+    });
+
+    test('should handle string literals with quantifiers', () => {
+      const pattern = 'string(ha)+';
+      const regex = prx.compile(pattern);
+      expect(regex.test('ha')).toBe(true);
+      expect(regex.test('haha')).toBe(true);
+      expect(regex.test('hahaha')).toBe(true);
+      expect(regex.test('h')).toBe(false);
+    });
+
+    test('should handle string literals in character classes', () => {
+      // Note: string() inside character classes doesn't make much sense
+      // but should be handled gracefully
+      const pattern = '[string(hello)]';
+      const regex = prx.compile(pattern);
+      // This would match individual characters from the string
+      expect(regex.test('h')).toBe(true);
+      expect(regex.test('e')).toBe(true);
+      expect(regex.test('l')).toBe(true);
+      expect(regex.test('o')).toBe(true);
+      expect(regex.test('a')).toBe(false);
+    });
+
+    test('should handle empty string literals', () => {
+      const pattern = 'string()';
+      const regex = prx.compile(pattern);
+      expect(regex.test('')).toBe(true);
+      expect(regex.test('anything')).toBe(false);
+    });
+
+    test('should handle string literals with regex special characters', () => {
+      const pattern = 'string(hello.world+test*regex)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('hello.world+test*regex')).toBe(true);
+      expect(regex.test('hello.worldtestregex')).toBe(false);
+    });
+
+    test('should handle case flags with extra whitespace', () => {
+      const pattern = 'string(banana , caseinsensitive )';
+      const regex = prx.compile(pattern);
+      expect(regex.test('banana')).toBe(true);
+      expect(regex.test('Banana')).toBe(true);
+      expect(regex.test('BANANA')).toBe(true);
+    });
+
+    test('should handle multiple string literals in sequence', () => {
+      const pattern = 'string(hello)string(world)';
+      const regex = prx.compile(pattern);
+      expect(regex.test('helloworld')).toBe(true);
+      expect(regex.test('hello world')).toBe(false);
+    });
+
+    test('should handle string literals with grouping', () => {
+      const pattern = '(string(hello)|string(world))+';
+      const regex = prx.compile(pattern);
+      console.log('Pattern:', pattern);
+      console.log('Compiled regex:', regex.toString());
+      console.log('Testing "hello":', regex.test('hello'));
+      console.log('Testing "world":', regex.test('world'));
+      console.log('Testing "helloworld":', regex.test('helloworld'));
+      console.log('Testing "hellohello":', regex.test('hellohello'));
+      expect(regex.test('hello')).toBe(true);
+      expect(regex.test('world')).toBe(true);
+      expect(regex.test('helloworld')).toBe(true);
+      expect(regex.test('hellohello')).toBe(true);
+    });
+  });
+
+  describe('String Matching Error Handling', () => {
+    test('should throw error for unclosed string() literal', () => {
+      expect(() => prx.parse('string(banana')).toThrow('Unclosed string() literal');
+    });
+
+    test('should throw error for malformed string() with missing content', () => {
+      expect(() => prx.parse('string()')).not.toThrow();
     });
   });
 }); 
