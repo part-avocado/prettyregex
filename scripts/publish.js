@@ -11,7 +11,7 @@ try {
   
   // Create npm version
   const npmPackage = { ...originalPackage };
-  npmPackage.name = 'pretty-regex';
+  npmPackage.name = 'prx-regex';
   delete npmPackage.publishConfig;
   
   // Write npm package.json
