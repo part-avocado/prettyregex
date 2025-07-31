@@ -110,35 +110,48 @@ class PatternValidator {
    */
   checkSyntaxIssues(pattern, result) {
     // Check for invalid ranges (but allow mixed case ranges like a-E)
-    // Use a more efficient regex to prevent ReDoS
-    const rangeRegex = /\[([^\]]*?)-([^\]]*?)\]/g;
-    let match;
-    
-    while ((match = rangeRegex.exec(pattern)) !== null) {
-      const [, start, end] = match;
-      if (start && end && start.length === 1 && end.length === 1) {
-        const startCode = start.charCodeAt(0);
-        const endCode = end.charCodeAt(0);
+    // Use string operations to prevent ReDoS
+    let i = 0;
+    while (i < pattern.length) {
+      if (pattern[i] === '[') {
+        const bracketEnd = pattern.indexOf(']', i);
+        if (bracketEnd === -1) break;
         
-        // Allow mixed case ranges (like a-E) by checking if they're the same letter
-        const startLower = start.toLowerCase();
-        const endLower = end.toLowerCase();
+        const bracketContent = pattern.substring(i + 1, bracketEnd);
+        const dashIndex = bracketContent.indexOf('-');
         
-        // Check if it's a valid mixed case range
-        const isMixedCaseRange = (
-          startLower === endLower || // Same letter, different case (a-A)
-          (startLower !== endLower && 
-           ((start === startLower && end !== endLower) || 
-            (start !== startLower && end === endLower))) // Different letters, mixed case (a-E)
-        );
-        
-        if (startCode > endCode && !isMixedCaseRange) {
-          result.errors.push(new RangeError(
-            `Invalid range '${start}-${end}': start character '${start}' comes after end character '${end}'`,
-            start,
-            end
-          ));
+        if (dashIndex !== -1) {
+          const start = bracketContent.substring(0, dashIndex).trim();
+          const end = bracketContent.substring(dashIndex + 1).trim();
+          
+          if (start && end && start.length === 1 && end.length === 1) {
+            const startCode = start.charCodeAt(0);
+            const endCode = end.charCodeAt(0);
+            
+            // Allow mixed case ranges (like a-E) by checking if they're the same letter
+            const startLower = start.toLowerCase();
+            const endLower = end.toLowerCase();
+            
+            // Check if it's a valid mixed case range
+            const isMixedCaseRange = (
+              startLower === endLower || // Same letter, different case (a-A)
+              (startLower !== endLower && 
+               ((start === startLower && end !== endLower) || 
+                (start !== startLower && end === endLower))) // Different letters, mixed case (a-E)
+            );
+            
+            if (startCode > endCode && !isMixedCaseRange) {
+              result.errors.push(new RangeError(
+                `Invalid range '${start}-${end}': start character '${start}' comes after end character '${end}'`,
+                start,
+                end
+              ));
+            }
+          }
         }
+        i = bracketEnd + 1;
+      } else {
+        i++;
       }
     }
 
@@ -151,12 +164,12 @@ class PatternValidator {
       ));
     }
 
-    // Check for quantifier issues
-    // Use a more efficient regex to prevent ReDoS
+    // Check for quantifier issues using string operations to prevent ReDoS
+    let quantifierMatch;
     const quantifierRegex = /(\+|\*|\?|\{\d+(?:,\d*)?\})\s*(\+|\*|\?|\{\d+(?:,\d*)?\})/g;
-    while ((match = quantifierRegex.exec(pattern)) !== null) {
+    while ((quantifierMatch = quantifierRegex.exec(pattern)) !== null) {
       result.warnings.push(new ValidationError(
-        `Adjacent quantifiers detected: '${match[1]}' followed by '${match[2]}'`,
+        `Adjacent quantifiers detected: '${quantifierMatch[1]}' followed by '${quantifierMatch[2]}'`,
         pattern,
         'Consider combining quantifiers or using grouping to clarify intent'
       ));

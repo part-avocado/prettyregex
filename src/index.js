@@ -77,8 +77,14 @@ class PrettyRegex {
       }
 
       // Check if pattern contains case insensitive string literals
-      // Use a more efficient regex to prevent ReDoS
-      const hasCaseInsensitive = /string\([^)]*,\s*(?:caseinsensitive|ci|nocase)\b/i.test(prxPattern);
+      // Use string operations to prevent ReDoS
+      const hasCaseInsensitive = prxPattern.includes('string(') && 
+        (prxPattern.includes(',caseinsensitive') || 
+         prxPattern.includes(',ci') || 
+         prxPattern.includes(',nocase') ||
+         prxPattern.includes(', caseinsensitive') ||
+         prxPattern.includes(', ci') ||
+         prxPattern.includes(', nocase'));
       const finalFlags = hasCaseInsensitive ? `${flags}i` : flags;
 
       const regexPattern = this.parse(prxPattern);
@@ -91,7 +97,7 @@ class PrettyRegex {
       
       // Check if compilation took too long
       if (Date.now() - startTime > timeout) {
-        throw new Error('Regex compilation timeout - potential ReDoS attack');
+        throw new ParseError('Regex compilation timeout - potential ReDoS attack', 0, prxPattern);
       }
       
       return regex;
@@ -117,17 +123,17 @@ class PrettyRegex {
   parse(prxPattern) {
     // Input validation to prevent ReDoS attacks
     if (typeof prxPattern !== 'string') {
-      throw new Error('Pattern must be a string');
+      throw new ParseError('Pattern must be a string', 0, prxPattern);
     }
     
     // Limit pattern length to prevent excessive processing
     if (prxPattern.length > 10000) {
-      throw new Error('Pattern too long - maximum 10000 characters allowed');
+      throw new ParseError('Pattern too long - maximum 10000 characters allowed', 0, prxPattern);
     }
     
     // Check for potentially dangerous patterns
     if (/(\*|\+|\.\*|\+\*|\*\*|\+\+){3,}/.test(prxPattern)) {
-      throw new Error('Pattern contains potentially dangerous quantifier combinations');
+      throw new ParseError('Pattern contains potentially dangerous quantifier combinations', 0, prxPattern);
     }
     
     let result = '';
@@ -185,8 +191,8 @@ class PrettyRegex {
             // In OR context, check if we're in a group with quantifier
             const isInGroupWithQuantifier = this.isInGroupWithQuantifier(prxPattern, i);
             
-            // Debug logging
-            if (this.options.logWarnings) {
+            // Debug logging - only in development mode
+            if (this.options.logWarnings && process.env.NODE_ENV === 'development') {
               // eslint-disable-next-line no-console
               console.log('OR context - Position:', i);
               // eslint-disable-next-line no-console
@@ -330,26 +336,26 @@ class PrettyRegex {
     // Trim the content to handle extra whitespace
     const trimmedContent = content.trim();
     
-    // Check for case sensitivity flags with better regex patterns to prevent ReDoS
-    const caseInsensitiveMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(?:caseinsensitive|ci|nocase)\b)$/i);
-    const caseSensitiveMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(?:casesensitive|cs|case)\b)$/i);
-    const multicaseMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(?:multicase|mc)\b)$/i);
+    // Check for case sensitivity flags using string operations to prevent ReDoS
+    // Avoid regex for simple string matching to eliminate ReDoS risk
+    const parts = trimmedContent.split(',').map(part => part.trim());
+    const stringValue = parts[0];
+    const flags = parts.slice(1).map(flag => flag.toLowerCase());
     
-
-    
-    let stringValue = content;
-    
-    if (caseInsensitiveMatch) {
-      stringValue = caseInsensitiveMatch[1].trim();
-      // For case insensitive, we'll rely on the 'i' flag being passed to compile()
+    // Check for case insensitive flag (check all flags)
+    if (flags.some(flag => flag === 'caseinsensitive' || flag === 'ci' || flag === 'nocase')) {
       return this.escapeLiteral(stringValue);
-    } else if (caseSensitiveMatch) {
-      stringValue = caseSensitiveMatch[1].trim();
+    }
+    // Check for case sensitive flag (check all flags)
+    else if (flags.some(flag => flag === 'casesensitive' || flag === 'cs' || flag === 'case')) {
       return this.escapeLiteral(stringValue);
-    } else if (multicaseMatch) {
-      stringValue = multicaseMatch[1].trim();
+    }
+    // Check for multicase flag (check all flags)
+    else if (flags.some(flag => flag === 'multicase' || flag === 'mc')) {
       return this.createMulticasePattern(stringValue);
     }
+    
+
     
     // Default case sensitive
     return this.escapeLiteral(stringValue);
@@ -600,7 +606,7 @@ class PrettyRegex {
       if (content.substring(i).startsWith('char(')) {
         const closeParenIndex = content.indexOf(')', i + 5);
         if (closeParenIndex === -1) {
-          throw new Error('Unclosed char() in character class');
+          throw new CharacterClassError('Unclosed char() in character class', content.substring(i));
         }
         
         const literalChar = content.substring(i + 5, closeParenIndex);
@@ -642,9 +648,9 @@ class PrettyRegex {
             // For mixed case ranges, create a range that includes both cases
             const startLower = startChar.toLowerCase();
             const endLower = endChar.toLowerCase();
-            result += `${startLower  }-${  endLower  }${startChar.toUpperCase()  }-${  endChar.toUpperCase()}`;
+            result += `${startLower}-${endLower}${startChar.toUpperCase()}-${endChar.toUpperCase()}`;
           } else {
-            result += `${startChar  }-${  endChar}`;
+            result += `${startChar}-${endChar}`;
           }
           i += 3; // Skip start, -, and end characters
           continue;
@@ -759,7 +765,7 @@ class PrettyRegex {
       if (requirement.substring(i).startsWith('char(')) {
         const closeParenIndex = requirement.indexOf(')', i + 5);
         if (closeParenIndex === -1) {
-          throw new Error('Unclosed char() in character requirement');
+          throw new ParseError('Unclosed char() in character requirement', i, requirement.substring(i));
         }
         
         const literalChar = requirement.substring(i + 5, closeParenIndex);
@@ -804,11 +810,15 @@ class PrettyRegex {
             const startLower = startChar.toLowerCase();
             const endLower = endChar.toLowerCase();
             const rangeStr = `${startLower}-${endLower}${startChar.toUpperCase()}-${endChar.toUpperCase()}`;
-            lookaheadClass = `[${rangeStr}]`;
+            // Properly escape the range string to prevent injection
+            const escapedRangeStr = this.escapeInCharClass(rangeStr);
+            lookaheadClass = `[${escapedRangeStr}]`;
             charClassParts.push(rangeStr);
           } else {
             const rangeStr = `${startChar}-${endChar}`;
-            lookaheadClass = `[${rangeStr}]`;
+            // Properly escape the range string to prevent injection
+            const escapedRangeStr = this.escapeInCharClass(rangeStr);
+            lookaheadClass = `[${escapedRangeStr}]`;
             charClassParts.push(rangeStr);
           }
           i += 3; // Skip start, -, and end characters
