@@ -1,7 +1,7 @@
 # PRX-RegEx
 
 ![GitHub repo size](https://img.shields.io/github/repo-size/part-avocado/prettyregex)
-[![Version](https://badge.fury.io/js/prx-regex.svg)](https://badge.fury.io/js/prx-regex)
+[![npm version](https://badge.fury.io/js/prx-regex.svg)](https://badge.fury.io/js/prx-regex)
 ![GitHub commits since latest release](https://img.shields.io/github/commits-since/part-avocado/prettyregex/latest)
 ![GitHub last commit](https://img.shields.io/github/last-commit/part-avocado/prettyregex)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
