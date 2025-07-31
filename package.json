@@ -13,7 +13,7 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "prepublishOnly": "npm test && npm run lint",
-    "publish:both": "node scripts/publish.js"
+    "publish:all": "node scripts/publish.js"
   },
   "keywords": [
     "regex",
