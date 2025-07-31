@@ -1,6 +1,6 @@
 {
   "name": "prx-regex",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "A simplified syntax for creating regular expressions with human-readable patterns",
   "main": "src/index.js",
   "types": "src/index.d.ts",
