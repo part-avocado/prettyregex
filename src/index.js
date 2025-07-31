@@ -340,18 +340,18 @@ class PrettyRegex {
     // Avoid regex for simple string matching to eliminate ReDoS risk
     const parts = trimmedContent.split(',').map(part => part.trim());
     const stringValue = parts[0];
-    const flag = parts[1] ? parts[1].toLowerCase() : '';
+    const flags = parts.slice(1).map(flag => flag.toLowerCase());
     
-    // Check for case insensitive flag
-    if (flag === 'caseinsensitive' || flag === 'ci' || flag === 'nocase') {
+    // Check for case insensitive flag (check all flags)
+    if (flags.some(flag => flag === 'caseinsensitive' || flag === 'ci' || flag === 'nocase')) {
       return this.escapeLiteral(stringValue);
     }
-    // Check for case sensitive flag
-    else if (flag === 'casesensitive' || flag === 'cs' || flag === 'case') {
+    // Check for case sensitive flag (check all flags)
+    else if (flags.some(flag => flag === 'casesensitive' || flag === 'cs' || flag === 'case')) {
       return this.escapeLiteral(stringValue);
     }
-    // Check for multicase flag
-    else if (flag === 'multicase' || flag === 'mc') {
+    // Check for multicase flag (check all flags)
+    else if (flags.some(flag => flag === 'multicase' || flag === 'mc')) {
       return this.createMulticasePattern(stringValue);
     }
     
