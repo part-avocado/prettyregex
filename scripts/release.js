@@ -1,5 +1,13 @@
 #!/usr/bin/env node
 
+/**
+ * Release script for PRX-RegEx
+ * 
+ * This script ONLY bumps the version in package.json and does NOT modify
+ * any dependency versions. It creates a clean release with the current
+ * dependency versions locked in.
+ */
+
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -24,9 +32,9 @@ try {
   console.log(`Current version: ${currentVersion}`);
   console.log(`Release type: ${releaseType}`);
   
-  // Bump version
-  console.log('\n📦 Bumping version...');
-  execSync(`npm version ${releaseType} --no-git-tag-version`, { stdio: 'inherit' });
+  // Bump version (only affects package.json version, not dependencies)
+  console.log('\n📦 Bumping package.json version...');
+  execSync(`npm version ${releaseType} --no-git-tag-version --no-commit-hooks --no-audit --no-fund`, { stdio: 'inherit' });
   
   // Read new version
   const newPackageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));

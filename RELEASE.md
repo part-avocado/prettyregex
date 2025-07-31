@@ -45,12 +45,14 @@ npm run release:major
 
 When you run a release script, it will:
 
-1. ✅ Bump the version in `package.json`
+1. ✅ Bump the version in `package.json` (only the main package version)
 2. ✅ Run tests to ensure everything works
 3. ✅ Run linting to check code quality
 4. ✅ Commit the version bump
 5. ✅ Create a git tag (e.g., `v1.0.5`)
 6. ✅ Push the commit and tag to GitHub
+
+**Note:** The release process only modifies the main package version in `package.json`. It does NOT update any dependency versions - those remain locked at their current versions for a stable release.
 
 Once the tag is pushed, GitHub Actions will automatically:
 

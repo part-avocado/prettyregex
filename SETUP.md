@@ -69,11 +69,13 @@ This guide explains how to set up automated npm publishing and GitHub package cr
 
 1. **Developer runs:** `npm run release:patch`
 2. **Script automatically:**
-   - Bumps version in `package.json`
+   - Bumps version in `package.json` (main package only)
    - Runs tests and linting
    - Commits changes
    - Creates git tag (e.g., `v1.0.5`)
    - Pushes to GitHub
+
+**Important:** The release process only modifies the main package version. Dependency versions remain unchanged for stable releases.
 
 3. **GitHub Actions automatically:**
    - Detects the version tag
