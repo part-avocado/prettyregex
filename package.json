@@ -88,7 +88,7 @@
     "collect-v8-coverage": "^1.0.2",
     "color-convert": "^2.0.1",
     "color-name": "^1.1.4",
-    "concat-map": "^0.0.1",
+    "concat-map": "^0.0.2",
     "convert-source-map": "^2.0.0",
     "create-jest": "^29.7.0",
     "cross-spawn": "^7.0.6",
