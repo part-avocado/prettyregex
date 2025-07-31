@@ -4,8 +4,8 @@
 ![NPM Last Update](https://img.shields.io/npm/last-update/prx-regex)
 ![GitHub last commit](https://img.shields.io/github/last-commit/part-avocado/prettyregex)
 ![GitHub commits since latest release](https://img.shields.io/github/commits-since/part-avocado/prettyregex/latest)
-![Node.js](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)](https://nodejs.org/)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Node.js](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)]
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]
 
 > **Human-readable regular expressions** - Write complex regex patterns using simple, intuitive syntax
 
