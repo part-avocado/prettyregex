@@ -29,7 +29,7 @@
   "author": "Pretty RegEx Team",
   "license": "MIT",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.0.0"
   },
   "devDependencies": {
     "eslint": "^8.57.1",

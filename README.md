@@ -4,6 +4,7 @@
 ![NPM Last Update](https://img.shields.io/npm/last-update/prx-regex)
 ![GitHub last commit](https://img.shields.io/github/last-commit/part-avocado/prettyregex)
 ![GitHub commits since latest release](https://img.shields.io/github/commits-since/part-avocado/prettyregex/latest)
+![Node.js](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen.svg)](https://nodejs.org/)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Human-readable regular expressions** - Write complex regex patterns using simple, intuitive syntax
@@ -425,7 +426,7 @@ This project uses GitHub Actions for continuous integration and deployment. The 
 
 ### Automated Checks
 
-- **Tests**: Runs on Node.js versions 14.x, 16.x, 18.x, and 20.x
+- **Tests**: Runs on Node.js versions 16.x, 18.x, 20.x, and 22.x
 - **Linting**: ESLint checks for code quality and consistency
 - **Security**: npm audit for vulnerability scanning
 - **Build**: Verifies the package builds correctly
