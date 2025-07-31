@@ -121,7 +121,7 @@
     "graceful-fs": "^4.2.11",
     "has-flag": "^4.0.0",
     "hasown": "^2.0.2",
-    "html-escaper": "^2.0.2",
+    "html-escaper": "^3.0.3",
     "human-signals": "^2.1.0",
     "import-local": "^3.2.0",
     "imurmurhash": "^0.1.4",
