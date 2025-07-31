@@ -76,8 +76,12 @@ class PrettyRegex {
         }
       }
 
+      // Check if pattern contains case insensitive string literals
+      const hasCaseInsensitive = /string\([^)]*,\s*(caseinsensitive|ci|nocase)/i.test(prxPattern);
+      const finalFlags = hasCaseInsensitive ? flags + 'i' : flags;
+
       const regexPattern = this.parse(prxPattern);
-      return new RegExp(regexPattern, flags);
+      return new RegExp(regexPattern, finalFlags);
     } catch (error) {
       if (error instanceof ValidationError || error instanceof ParseError) {
         throw error;
@@ -100,12 +104,14 @@ class PrettyRegex {
   parse(prxPattern) {
     let result = '';
     let i = 0;
+    let isInCharacterClass = false;
     
     while (i < prxPattern.length) {
       const char = prxPattern[i];
       
       // Handle character classes and special tokens
       if (char === '[') {
+        isInCharacterClass = true;
         const classEnd = prxPattern.indexOf(']', i);
         if (classEnd === -1) {
           throw new CharacterClassError(
@@ -117,6 +123,79 @@ class PrettyRegex {
         const classContent = prxPattern.substring(i + 1, classEnd);
         result += this.parseCharacterClass(classContent);
         i = classEnd + 1;
+        isInCharacterClass = false;
+        continue;
+      }
+      
+      // Handle string literals with string()
+      if (prxPattern.substring(i).startsWith('string(')) {
+        const closeParenIndex = prxPattern.indexOf(')', i + 7);
+        if (closeParenIndex === -1) {
+          throw new ParseError(
+            'Unclosed string() literal',
+            i,
+            prxPattern.substring(i, i + 15)
+          );
+        }
+        
+        const stringContent = prxPattern.substring(i + 7, closeParenIndex);
+        const parsedString = this.parseStringLiteral(stringContent);
+        
+        // Add appropriate boundaries based on context
+        const nextChar = prxPattern[closeParenIndex + 1];
+        const isFollowedByQuantifier = nextChar && /[+*?{]/.test(nextChar);
+        const isInOrContext = this.isInOrContext(prxPattern, i);
+        const isInSequence = this.isInSequence(prxPattern, i);
+        const containsSpecialChars = /[^a-zA-Z0-9]/.test(parsedString);
+        
+
+        
+        // Add appropriate boundaries based on context
+        if (parsedString && !isInCharacterClass && !isFollowedByQuantifier) {
+          if (isInOrContext) {
+            // In OR context, check if we're in a group with quantifier
+            const isInGroupWithQuantifier = this.isInGroupWithQuantifier(prxPattern, i);
+            
+            // Debug logging
+            if (this.options.logWarnings) {
+              console.log('OR context - Position:', i);
+              console.log('OR context - Is in group with quantifier:', isInGroupWithQuantifier);
+            }
+            
+            if (isInGroupWithQuantifier) {
+              // Use word boundaries for OR contexts in groups with quantifiers
+              if (/\w/.test(parsedString)) {
+                result += `\\b${parsedString}\\b`;
+              } else {
+                result += parsedString;
+              }
+            } else {
+              // Use start/end anchors for standalone OR contexts
+              result += `^${parsedString}$`;
+            }
+          } else if (isInSequence) {
+            // In sequence, just use the parsed string (no boundaries)
+            result += parsedString;
+          } else {
+            // Standalone string literals
+            if (containsSpecialChars) {
+              // For strings with special chars, use start/end anchors
+              result += `^${parsedString}$`;
+            } else if (/\w/.test(parsedString)) {
+              // For word-only strings, use word boundaries
+              result += `\\b${parsedString}\\b`;
+            } else {
+              // For other strings, just use the parsed string
+              result += parsedString;
+            }
+          }
+        } else {
+          result += parsedString;
+        }
+        
+
+        
+        i = closeParenIndex + 1;
         continue;
       }
       
@@ -208,6 +287,265 @@ class PrettyRegex {
     }
     
     return result;
+  }
+
+  /**
+   * Parse string literal with case sensitivity options
+   * @param {string} content - Content inside string() with optional case flags
+   * @returns {string} - Escaped string literal with case handling
+   */
+  parseStringLiteral(content) {
+    // Handle empty string case
+    if (!content || content.trim() === '') {
+      return '(?:)'; // Non-capturing empty group
+    }
+    
+    // Trim the content to handle extra whitespace
+    const trimmedContent = content.trim();
+    
+    // Check for case sensitivity flags with better regex patterns
+    const caseInsensitiveMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(caseinsensitive|ci|nocase))$/i);
+    const caseSensitiveMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(casesensitive|cs|case))$/i);
+    const multicaseMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(multicase|mc))$/i);
+    
+
+    
+    let stringValue = content;
+    
+    if (caseInsensitiveMatch) {
+      stringValue = caseInsensitiveMatch[1].trim();
+      // For case insensitive, we'll rely on the 'i' flag being passed to compile()
+      return this.escapeLiteral(stringValue);
+    } else if (caseSensitiveMatch) {
+      stringValue = caseSensitiveMatch[1].trim();
+      return this.escapeLiteral(stringValue);
+    } else if (multicaseMatch) {
+      stringValue = multicaseMatch[1].trim();
+      return this.createMulticasePattern(stringValue);
+    }
+    
+    // Default case sensitive
+    return this.escapeLiteral(stringValue);
+  }
+
+  /**
+   * Check if a position is in an OR context (between | operators)
+   * @param {string} pattern - The full pattern
+   * @param {number} position - Current position
+   * @returns {boolean} - Whether we're in an OR context
+   */
+  isInOrContext(pattern, position) {
+    // Look backwards for the nearest | or ( or start of pattern
+    let i = position - 1;
+    let parenCount = 0;
+    
+    while (i >= 0) {
+      const char = pattern[i];
+      if (char === ')') {
+        parenCount++;
+      } else if (char === '(') {
+        parenCount--;
+        if (parenCount < 0) break;
+      } else if (char === '|' && parenCount === 0) {
+        return true;
+      }
+      i--;
+    }
+    
+    // Also look ahead for | operators
+    i = position + 1;
+    parenCount = 0;
+    
+    while (i < pattern.length) {
+      const char = pattern[i];
+      if (char === '(') {
+        parenCount++;
+      } else if (char === ')') {
+        parenCount--;
+        if (parenCount < 0) break;
+      } else if (char === '|' && parenCount === 0) {
+        return true;
+      }
+      i++;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if a position is in a group with quantifier
+   * @param {string} pattern - The full pattern
+   * @param {number} position - Current position
+   * @returns {boolean} - Whether we're in a group with quantifier
+   */
+  isInGroupWithQuantifier(pattern, position) {
+    // First, check if we're inside parentheses by looking backwards
+    let i = position - 1;
+    let parenCount = 0;
+    let inGroup = false;
+    
+    while (i >= 0) {
+      const char = pattern[i];
+      if (char === ')') {
+        parenCount++;
+      } else if (char === '(') {
+        parenCount--;
+        if (parenCount < 0) {
+          // Found the start of our group
+          inGroup = true;
+          break;
+        }
+      }
+      i--;
+    }
+    
+    if (!inGroup) {
+      return false;
+    }
+    
+    // Now look ahead from the current position to find the end of the group
+    i = position;
+    parenCount = 0;
+    
+    while (i < pattern.length) {
+      const char = pattern[i];
+      if (char === '(') {
+        parenCount++;
+      } else if (char === ')') {
+        parenCount--;
+        if (parenCount < 0) {
+          // Found the end of our group, check if next char is a quantifier
+          const nextChar = pattern[i + 1];
+          return nextChar && /[+*?{]/.test(nextChar);
+        }
+      }
+      i++;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if a position is in a sequence (followed by another string literal)
+   * @param {string} pattern - The full pattern
+   * @param {number} position - Current position
+   * @returns {boolean} - Whether we're in a sequence
+   */
+  isInSequence(pattern, position) {
+    // Look ahead to see if there's another string() call immediately after this one
+    const remainingPattern = pattern.substring(position);
+    const nextStringMatch = remainingPattern.match(/string\(/);
+    
+
+    
+    if (nextStringMatch && nextStringMatch.index > 0) {
+      const nextStringPos = position + nextStringMatch.index;
+      // Check if there's only whitespace and parentheses between current position and next string
+      const betweenText = pattern.substring(position, nextStringPos);
+      const isSequence = /^[\s()]*$/.test(betweenText);
+      
+
+      
+      return isSequence;
+    }
+    
+    // Look for the next string() call after the current one
+    // Skip the current string() call first
+    const currentStringEnd = pattern.indexOf(')', position);
+    if (currentStringEnd !== -1) {
+      const afterCurrentString = pattern.substring(currentStringEnd + 1);
+      const nextStringMatch = afterCurrentString.match(/string\(/);
+      
+
+      
+      if (nextStringMatch) {
+        const nextStringPos = currentStringEnd + 1 + nextStringMatch.index;
+        // Check if there's only whitespace and parentheses between current string end and next string
+        const betweenText = pattern.substring(currentStringEnd + 1, nextStringPos);
+        const isSequence = /^[\s()]*$/.test(betweenText);
+        
+
+        
+        return isSequence;
+      }
+      
+      // If there's no next string but we're in a sequence context, check if there was a previous string
+      // Look backwards to see if there was a string() call before this one
+      let i = position - 1;
+      while (i >= 0) {
+        const char = pattern[i];
+        if (char === ')') {
+          // Found the end of a previous string() call
+          const beforeCurrentString = pattern.substring(0, i + 1);
+          const prevStringMatch = beforeCurrentString.match(/string\([^)]*\)$/);
+          if (prevStringMatch) {
+            // Check if there's only whitespace and parentheses between the previous string and current position
+            const betweenText = pattern.substring(i + 1, position);
+            const isSequence = /^[\s()]*$/.test(betweenText);
+            
+
+            
+            return isSequence;
+          }
+          break;
+        }
+        i--;
+      }
+    }
+    
+    // Also check if we're in a grouping context (inside parentheses)
+    let i = position - 1;
+    let parenCount = 0;
+    
+    while (i >= 0) {
+      const char = pattern[i];
+      if (char === ')') {
+        parenCount++;
+      } else if (char === '(') {
+        parenCount--;
+        if (parenCount < 0) break;
+      }
+      i--;
+    }
+    
+    const inGrouping = parenCount > 0; // We're inside parentheses
+    
+
+    
+    return inGrouping;
+  }
+
+  /**
+   * Create a multicase pattern that matches all case variations
+   * @param {string} text - The text to create multicase pattern for
+   * @returns {string} - Regex pattern matching all case variations
+   */
+  createMulticasePattern(text) {
+    if (!text || text.length === 0) {
+      return '';
+    }
+    
+    // For each character, create a pattern that matches both upper and lowercase
+    const patterns = [];
+    
+    for (const char of text) {
+      if (/[a-zA-Z]/.test(char)) {
+        // For letters, create [Aa] pattern
+        const lower = char.toLowerCase();
+        const upper = char.toUpperCase();
+        if (lower === upper) {
+          // Same character (non-letter)
+          patterns.push(this.escapeLiteral(char));
+        } else {
+          patterns.push(`[${lower}${upper}]`);
+        }
+      } else {
+        // For non-letters, just escape
+        patterns.push(this.escapeLiteral(char));
+      }
+    }
+    
+    return patterns.join('');
   }
 
   /**
@@ -682,7 +1020,13 @@ class PrettyRegex {
       quantifiers: Object.keys(this.quantifiers),
       operators: ['&', '+', '|'],
       anchors: ['start', 'end', 'word', 'notword'],
-      literals: ['char()', 'space', 'tab', 'newline'],
+      literals: ['char()', 'string()', 'space', 'tab', 'newline'],
+      stringMatching: {
+        basic: 'string(text) - Match exact string',
+        caseInsensitive: 'string(text, caseinsensitive) - Case insensitive match',
+        caseSensitive: 'string(text, casesensitive) - Case sensitive match (default)',
+        multicase: 'string(text, multicase) - Match all case variations'
+      },
       ranges: 'Supports numeric and character ranges (e.g., [0-9], [a-z], [a-E])'
     };
   }

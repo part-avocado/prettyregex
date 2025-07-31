@@ -77,6 +77,9 @@ try {
 | `whitespace` | `\s` | Any whitespace |
 | `wordchar` | `\w` | Word characters |
 | `any` | `.` | Any character |
+| `string(text)` | `text` | Exact string match |
+| `string(text, caseinsensitive)` | `text` (with `i` flag) | Case insensitive match |
+| `string(text, multicase)` | `[tT][eE][xX][tT]` | All case variations |
 
 ### Character Ranges
 
@@ -141,6 +144,63 @@ const phone = 'char(\\()0-9{3}char(\\))char( )0-9{3}char(-)0-9{4}';
 console.log(PrettyRegex.test(phone, '(555) 123-4567')); // true
 ```
 
+### String Matching
+
+Use `string(text)` to match exact strings with powerful case sensitivity options:
+
+#### Basic String Matching
+```javascript
+// Match exact string
+const pattern = 'string(banana)';
+console.log(PrettyRegex.test(pattern, 'banana')); // true
+console.log(PrettyRegex.test(pattern, 'Banana')); // false
+```
+
+#### Case Insensitive Matching
+```javascript
+// Case insensitive matching
+const pattern = 'string(banana, caseinsensitive)';
+console.log(PrettyRegex.test(pattern, 'banana')); // true
+console.log(PrettyRegex.test(pattern, 'Banana')); // true
+console.log(PrettyRegex.test(pattern, 'BANANA')); // true
+
+// Short flags: ci, nocase
+const shortPattern = 'string(banana, ci)';
+```
+
+#### Case Sensitive Matching (Default)
+```javascript
+// Explicit case sensitive matching
+const pattern = 'string(banana, casesensitive)';
+console.log(PrettyRegex.test(pattern, 'banana')); // true
+console.log(PrettyRegex.test(pattern, 'Banana')); // false
+
+// Short flags: cs, case
+const shortPattern = 'string(banana, cs)';
+```
+
+#### Multicase Matching
+Match all possible case variations of a string:
+
+```javascript
+// Multicase matching
+const pattern = 'string(banana, multicase)';
+console.log(PrettyRegex.test(pattern, 'banana')); // true
+console.log(PrettyRegex.test(pattern, 'Banana')); // true
+console.log(PrettyRegex.test(pattern, 'BANANA')); // true
+console.log(PrettyRegex.test(pattern, 'bAnAnA')); // true
+
+// Short flag: mc
+const shortPattern = 'string(banana, mc)';
+```
+
+#### String Matching with Special Characters
+```javascript
+// Strings with special regex characters are automatically escaped
+const pattern = 'string(hello.world+test*regex)';
+console.log(PrettyRegex.test(pattern, 'hello.world+test*regex')); // true
+```
+
 ## Real-World Examples
 
 ### Email Validation
@@ -150,6 +210,11 @@ console.log(PrettyRegex.test(phone, '(555) 123-4567')); // true
 const email = '[charU+charL+0-9+char(.)+char(_)+char(-)]+char(@)[charU+charL+0-9+char(.)+char(-)]+char(.)[charL]{2,}';
 console.log(PrettyRegex.test(email, 'user.name@domain.com')); // true
 console.log(PrettyRegex.test(email, 'user-name@sub.domain.co.uk')); // true
+
+// Email with case insensitive domain
+const emailCI = '[charU+charL+0-9+char(.)+char(_)+char(-)]+string(@, caseinsensitive)[charU+charL+0-9+char(.)+char(-)]+string(.com, caseinsensitive)';
+console.log(PrettyRegex.test(emailCI, 'user@EXAMPLE.COM')); // true
+console.log(PrettyRegex.test(emailCI, 'user@Example.Com')); // true
 ```
 
 ### URL Validation
@@ -159,6 +224,11 @@ console.log(PrettyRegex.test(email, 'user-name@sub.domain.co.uk')); // true
 const url = 'char(h)char(t)char(t)char(p)char(s)?char(:)char(/)char(/)[charU+charL+0-9+char(.)+char(-)]+';
 console.log(PrettyRegex.test(url, 'https://example.com')); // true
 console.log(PrettyRegex.test(url, 'http://sub-domain.example.co.uk')); // true
+
+// URL with case insensitive protocol
+const urlCI = 'string(http, caseinsensitive)string(s, caseinsensitive)?string(:)string(//)[charU+charL+0-9+char(.)+char(-)]+';
+console.log(PrettyRegex.test(urlCI, 'HTTP://example.com')); // true
+console.log(PrettyRegex.test(urlCI, 'HTTPS://EXAMPLE.COM')); // true
 ```
 
 ### Strong Password Validation
@@ -169,6 +239,12 @@ const strongPassword = '[charU&charL&0-9&char(!@#$%^&*)]{8,}';
 console.log(PrettyRegex.test(strongPassword, 'Password123!')); // true
 console.log(PrettyRegex.test(strongPassword, 'password123!')); // false (missing uppercase)
 console.log(PrettyRegex.test(strongPassword, 'Password123')); // false (missing special char)
+
+// Password validation excluding common weak passwords
+const securePassword = 'start(?!string(password, caseinsensitive))(?!string(123, caseinsensitive))[charU+charL+0-9+char(!@#$%^&*)]{8,}end';
+console.log(PrettyRegex.test(securePassword, 'MyPass123!')); // true
+console.log(PrettyRegex.test(securePassword, 'password123')); // false (contains "password")
+console.log(PrettyRegex.test(securePassword, 'PASSWORD123')); // false (contains "password")
 ```
 
 ### Date and Time Formats
@@ -181,6 +257,34 @@ console.log(PrettyRegex.test(date, '2023-12-25')); // true
 // Time: HH:MM
 const time = '0-9{2}char(:)0-9{2}';
 console.log(PrettyRegex.test(time, '14:30')); // true
+
+// Date with case insensitive month names
+const dateWithMonth = 'string(2023, caseinsensitive)string(-)string(december, caseinsensitive)string(-)string(25, caseinsensitive)';
+console.log(PrettyRegex.test(dateWithMonth, '2023-December-25')); // true
+console.log(PrettyRegex.test(dateWithMonth, '2023-DECEMBER-25')); // true
+```
+
+### File Extension Validation
+
+```javascript
+// Case insensitive file extensions
+const fileExtensions = 'string(.txt, caseinsensitive)|string(.pdf, caseinsensitive)|string(.doc, caseinsensitive)';
+console.log(PrettyRegex.test(fileExtensions, '.TXT')); // true
+console.log(PrettyRegex.test(fileExtensions, '.pdf')); // true
+console.log(PrettyRegex.test(fileExtensions, '.DOC')); // true
+console.log(PrettyRegex.test(fileExtensions, '.jpg')); // false
+```
+
+### Greeting Detection
+
+```javascript
+// Multicase greeting detection
+const greetings = 'string(hello, multicase)|string(hi, multicase)|string(hey, multicase)';
+console.log(PrettyRegex.test(greetings, 'Hello')); // true
+console.log(PrettyRegex.test(greetings, 'HELLO')); // true
+console.log(PrettyRegex.test(greetings, 'hElLo')); // true
+console.log(PrettyRegex.test(greetings, 'Hi')); // true
+console.log(PrettyRegex.test(greetings, 'Goodbye')); // false
 ```
 
 ### PrettyRegex Class
