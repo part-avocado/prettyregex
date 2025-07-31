@@ -102,7 +102,7 @@ class AdvancedPrettyRegex {
     
     // Handle possessive quantifiers first
     result = result.replace(/possessive([+*?])/g, (match, quantifier) => {
-      return quantifier + '+';
+      return `${quantifier  }+`;
     });
     
     // Handle named groups
@@ -130,7 +130,7 @@ class AdvancedPrettyRegex {
     
     // Only replace standalone patterns that haven't been processed by the function calls above
     const processedPatterns = ['lookahead', 'neglookahead', 'lookbehind', 'neglookbehind', 
-                              'unicode', 'notunicode', 'comment', 'namedgroup'];
+      'unicode', 'notunicode', 'comment', 'namedgroup'];
     
     // Replace all advanced patterns - sort by length to handle longer patterns first
     const sortedPatterns = Object.entries(this.advancedPatterns)
@@ -139,7 +139,7 @@ class AdvancedPrettyRegex {
     
     for (const [patternName, replacement] of sortedPatterns) {
       // Use exact match for better precision
-      const regex = new RegExp('\\b' + this.escapeRegExp(patternName) + '\\b', 'g');
+      const regex = new RegExp(`\\b${  this.escapeRegExp(patternName)  }\\b`, 'g');
       result = result.replace(regex, replacement);
     }
     

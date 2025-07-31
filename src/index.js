@@ -277,9 +277,9 @@ class PrettyRegex {
             // For mixed case ranges, create a range that includes both cases
             const startLower = startChar.toLowerCase();
             const endLower = endChar.toLowerCase();
-            result += startLower + '-' + endLower + startChar.toUpperCase() + '-' + endChar.toUpperCase();
+            result += `${startLower  }-${  endLower  }${startChar.toUpperCase()  }-${  endChar.toUpperCase()}`;
           } else {
-            result += startChar + '-' + endChar;
+            result += `${startChar  }-${  endChar}`;
           }
           i += 3; // Skip start, -, and end characters
           continue;
@@ -309,8 +309,8 @@ class PrettyRegex {
       return this.parseCharacterClass(content.replace('&', ''));
     }
     
-    let lookaheads = [];
-    let allCharClasses = [];
+    const lookaheads = [];
+    const allCharClasses = [];
     
     for (const requirement of requirements) {
       const parsed = this.parseCharacterRequirement(requirement);
@@ -387,7 +387,7 @@ class PrettyRegex {
   parseCharacterRequirement(requirement) {
     let i = 0;
     let lookaheadClass = '';
-    let charClassParts = [];
+    const charClassParts = [];
     
     while (i < requirement.length) {
       // Handle char() literals FIRST to avoid conflicts with 'char' pattern
@@ -438,12 +438,12 @@ class PrettyRegex {
             // For mixed case ranges, create a range that includes both cases
             const startLower = startChar.toLowerCase();
             const endLower = endChar.toLowerCase();
-            const rangeStr = startLower + '-' + endLower + startChar.toUpperCase() + '-' + endChar.toUpperCase();
-            lookaheadClass = '[' + rangeStr + ']';
+            const rangeStr = `${startLower  }-${  endLower  }${startChar.toUpperCase()  }-${  endChar.toUpperCase()}`;
+            lookaheadClass = `[${  rangeStr  }]`;
             charClassParts.push(rangeStr);
           } else {
-            const rangeStr = startChar + '-' + endChar;
-            lookaheadClass = '[' + rangeStr + ']';
+            const rangeStr = `${startChar  }-${  endChar}`;
+            lookaheadClass = `[${  rangeStr  }]`;
             charClassParts.push(rangeStr);
           }
           i += 3; // Skip start, -, and end characters
@@ -657,9 +657,9 @@ class PrettyRegex {
       
       return {
         original: pattern,
-        parsed: parsed,
+        parsed,
         compiled: compiled.toString(),
-        validation: validation,
+        validation,
         suggestions: this.validator.getSuggestions(pattern),
         isValid: validation.isValid && compiled.toString() !== '/(?:)/'
       };

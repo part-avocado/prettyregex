@@ -16,13 +16,13 @@ A simplified syntax for creating regular expressions with human-readable pattern
 
 (NOT YET PUBLISHED)
 ```bash
-npm install pretty-regex
+npm install prx-regex
 ```
 
 ## Quick Start
 
 ```javascript
-const PrettyRegex = require('pretty-regex');
+const PrettyRegex = require('prx-regex');
 
 // Basic usage
 const emailPattern = '[charU+charL+0-9]+char(@)[charU+charL+0-9]+char(.)[charL]{2,}';
@@ -238,7 +238,7 @@ const debug = PrettyRegex.debug('[0-9]+');
 ## Examples
 
 ```javascript
-const PrettyRegex = require('pretty-regex');
+const PrettyRegex = require('prx-regex');
 
 // Username: letters, numbers, underscore, 3-20 characters
 const username = '[charU+charL+0-9+char(_)]{3,20}';
@@ -359,7 +359,7 @@ emails.forEach(email => {
 For complex patterns, use the `AdvancedPrettyRegex` class:
 
 ```javascript
-const { AdvancedPrettyRegex } = require('pretty-regex');
+const { AdvancedPrettyRegex } = require('prx-regex');
 const advanced = new AdvancedPrettyRegex();
 
 // Lookaheads for password validation
@@ -491,11 +491,10 @@ The package includes comprehensive tests for:
 - [ ] Performance optimizations
 - [ ] Browser compatibility testing
 - [ ] String matching (similar to char(), but for strings)
-- [ ] Publish to NPM
 
 ## License
 
 MIT License - see the [LICENSE](LICENSE) file for details
 
 Inspired by the need for human-readable regex patterns and for developers who find regex intimidating.
-Special thanks to the regex community for creating aa pain in my ass.
+Special thanks to the regex community for creating a pain in my ass.
