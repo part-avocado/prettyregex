@@ -26,25 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full test coverage (95+ tests)
 - Comprehensive documentation
 
-### Features
-- **Character Classes**: Simplified syntax for common character sets
-- **Character Ranges**: Support for numeric and alphabetic ranges
-- **Mixed Case Ranges**: Automatic handling of case-insensitive ranges
-- **MUST Requirements**: Enforce all character types with `&` operator
-- **Union Operations**: Traditional union behavior with `+` operator
-- **Validation**: Pre-compilation pattern validation
-- **Error Handling**: Graceful error handling with informative messages
-- **Debugging**: Built-in debugging utilities
-- **Performance**: Optimized parsing and compilation
-
-### Technical
-- Node.js >= 14.0.0 support
-- MIT License
-- Comprehensive test suite
-- Production-ready error handling
-- Modular architecture
-- Extensible design
-
 ## [1.0.3] - 2025-06-31
 
 ### Added
@@ -55,11 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Revised [README](README.md) for better publish display.
 
-## [IN DEVELOPMENT]
+## [1.1.2] - 2025-06-31
 
-### Planned
-- TypeScript definitions
-- Browser support
-- Additional character classes
-- Performance optimizations
-- Plugin system 
+### Added
+- String match functionality using `string()`.
+
+### Removed
+- Workflows (they dont work)
+
+## [IN DEVELOPMENT]
