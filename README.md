@@ -1,7 +1,7 @@
 # PRX-RegEx
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/part-avocado/prettyregex)
-![GitHub Release](https://img.shields.io/github/v/release/part-avocado/prettyregex)
+![GitHub Release](https://img.shields.io/github/v/release/part-avocado/prettyregex?include_prereleases&display_name=release&label=Release%20Version)
 ![NPM Version](https://img.shields.io/npm/v/prx-regex)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
