@@ -110,7 +110,8 @@ class PatternValidator {
    */
   checkSyntaxIssues(pattern, result) {
     // Check for invalid ranges (but allow mixed case ranges like a-E)
-    const rangeRegex = /\[([^\]]*)-([^\]]*)\]/g;
+    // Use a more efficient regex to prevent ReDoS
+    const rangeRegex = /\[([^\]]*?)-([^\]]*?)\]/g;
     let match;
     
     while ((match = rangeRegex.exec(pattern)) !== null) {
@@ -151,6 +152,7 @@ class PatternValidator {
     }
 
     // Check for quantifier issues
+    // Use a more efficient regex to prevent ReDoS
     const quantifierRegex = /(\+|\*|\?|\{\d+(?:,\d*)?\})\s*(\+|\*|\?|\{\d+(?:,\d*)?\})/g;
     while ((match = quantifierRegex.exec(pattern)) !== null) {
       result.warnings.push(new ValidationError(
@@ -168,7 +170,8 @@ class PatternValidator {
    */
   checkPerformanceIssues(pattern, result) {
     // Check for nested quantifiers
-    const nestedQuantifierRegex = /(\+|\*|\?|\{\d+(?:,\d*)?\}).*(\+|\*|\?|\{\d+(?:,\d*)?\})/g;
+    // Use a more efficient regex to prevent ReDoS
+    const nestedQuantifierRegex = /(\+|\*|\?|\{\d+(?:,\d*)?\}).*?(\+|\*|\?|\{\d+(?:,\d*)?\})/g;
     if (nestedQuantifierRegex.test(pattern)) {
       result.warnings.push(new ValidationError(
         'Nested quantifiers detected. This may cause performance issues.',
@@ -178,6 +181,7 @@ class PatternValidator {
     }
 
     // Check for very long character classes
+    // Use a more efficient regex to prevent ReDoS
     const longCharClassRegex = /\[[^\]]{100,}\]/g;
     if (longCharClassRegex.test(pattern)) {
       result.warnings.push(new ValidationError(

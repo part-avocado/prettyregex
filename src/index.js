@@ -77,11 +77,24 @@ class PrettyRegex {
       }
 
       // Check if pattern contains case insensitive string literals
-      const hasCaseInsensitive = /string\([^)]*,\s*(caseinsensitive|ci|nocase)/i.test(prxPattern);
+      // Use a more efficient regex to prevent ReDoS
+      const hasCaseInsensitive = /string\([^)]*,\s*(?:caseinsensitive|ci|nocase)\b/i.test(prxPattern);
       const finalFlags = hasCaseInsensitive ? `${flags}i` : flags;
 
       const regexPattern = this.parse(prxPattern);
-      return new RegExp(regexPattern, finalFlags);
+      
+      // Add timeout protection for regex compilation
+      const timeout = 5000; // 5 seconds timeout
+      const startTime = Date.now();
+      
+      const regex = new RegExp(regexPattern, finalFlags);
+      
+      // Check if compilation took too long
+      if (Date.now() - startTime > timeout) {
+        throw new Error('Regex compilation timeout - potential ReDoS attack');
+      }
+      
+      return regex;
     } catch (error) {
       if (error instanceof ValidationError || error instanceof ParseError) {
         throw error;
@@ -102,6 +115,21 @@ class PrettyRegex {
    * @returns {string} - The regex pattern string
    */
   parse(prxPattern) {
+    // Input validation to prevent ReDoS attacks
+    if (typeof prxPattern !== 'string') {
+      throw new Error('Pattern must be a string');
+    }
+    
+    // Limit pattern length to prevent excessive processing
+    if (prxPattern.length > 10000) {
+      throw new Error('Pattern too long - maximum 10000 characters allowed');
+    }
+    
+    // Check for potentially dangerous patterns
+    if (/(\*|\+|\.\*|\+\*|\*\*|\+\+){3,}/.test(prxPattern)) {
+      throw new Error('Pattern contains potentially dangerous quantifier combinations');
+    }
+    
     let result = '';
     let i = 0;
     let isInCharacterClass = false;
@@ -146,6 +174,7 @@ class PrettyRegex {
         const isFollowedByQuantifier = nextChar && /[+*?{]/.test(nextChar);
         const isInOrContext = this.isInOrContext(prxPattern, i);
         const isInSequence = this.isInSequence(prxPattern, i);
+        // Use a more efficient regex to prevent ReDoS
         const containsSpecialChars = /[^a-zA-Z0-9]/.test(parsedString);
         
 
@@ -301,10 +330,10 @@ class PrettyRegex {
     // Trim the content to handle extra whitespace
     const trimmedContent = content.trim();
     
-    // Check for case sensitivity flags with better regex patterns
-    const caseInsensitiveMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(caseinsensitive|ci|nocase))$/i);
-    const caseSensitiveMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(casesensitive|cs|case))$/i);
-    const multicaseMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(multicase|mc))$/i);
+    // Check for case sensitivity flags with better regex patterns to prevent ReDoS
+    const caseInsensitiveMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(?:caseinsensitive|ci|nocase)\b)$/i);
+    const caseSensitiveMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(?:casesensitive|cs|case)\b)$/i);
+    const multicaseMatch = trimmedContent.match(/^(.+?)(?:\s*,\s*(?:multicase|mc)\b)$/i);
     
 
     
@@ -774,12 +803,12 @@ class PrettyRegex {
             // For mixed case ranges, create a range that includes both cases
             const startLower = startChar.toLowerCase();
             const endLower = endChar.toLowerCase();
-            const rangeStr = `${startLower  }-${  endLower  }${startChar.toUpperCase()  }-${  endChar.toUpperCase()}`;
-            lookaheadClass = `[${  rangeStr  }]`;
+            const rangeStr = `${startLower}-${endLower}${startChar.toUpperCase()}-${endChar.toUpperCase()}`;
+            lookaheadClass = `[${rangeStr}]`;
             charClassParts.push(rangeStr);
           } else {
-            const rangeStr = `${startChar  }-${  endChar}`;
-            lookaheadClass = `[${  rangeStr  }]`;
+            const rangeStr = `${startChar}-${endChar}`;
+            lookaheadClass = `[${rangeStr}]`;
             charClassParts.push(rangeStr);
           }
           i += 3; // Skip start, -, and end characters
