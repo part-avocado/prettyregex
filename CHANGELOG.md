@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Changed all references of pretty-regex to prx-regex to match NPM name
 
-## [1.0.3a] - 2025-06-31
+## [1.0.4] (aka. 1.0.3a) - 2025-06-31 
 
 ### Added
 - Revised [README](README.md) for better publish display.
