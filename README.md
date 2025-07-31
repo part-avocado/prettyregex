@@ -1,6 +1,6 @@
 # PRX-RegEx
 
-[![Version](https://badge.fury.io/js/prx-regex.svg)](https://badge.fury.io/js/prx-regex)
+[[Version](https://badge.fury.io/js/prx-regex.svg)](https://badge.fury.io/js/prx-regex)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
 
