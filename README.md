@@ -1,10 +1,10 @@
 # PRX-RegEx
 
-> **Human-readable regular expressions** - Write complex regex patterns using simple, intuitive syntax
-
-[![npm version](https://badge.fury.io/js/prx-regex.svg)](https://badge.fury.io/js/prx-regex)
+[![Version](https://badge.fury.io/js/prx-regex.svg)](https://badge.fury.io/js/prx-regex)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
+
+> **Human-readable regular expressions** - Write complex regex patterns using simple, intuitive syntax
 
 Transform complex regular expressions into readable, maintainable code. PRX-RegEx provides a simplified syntax that makes regex patterns accessible to everyone.
 
