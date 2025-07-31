@@ -56,7 +56,7 @@ console.log();
 console.log('=== Complex Patterns ===');
 
 // Email validation with case insensitive domain
-const emailPattern = '[charU+charL+0-9+char(.)+char(_)+char(-)]+string(@, caseinsensitive)[charU+charL+0-9+char(.)+char(-)]+string(.com, caseinsensitive)';
+const emailPattern = '[charU+charL+0-9+char(.)+char(_)+char(-)]+char(@)[charU+charL+0-9+char(.)+char(-)]+char(.)+string(com, caseinsensitive)';
 console.log(`Email Pattern: ${emailPattern}`);
 console.log(`Matches "user@EXAMPLE.COM": ${prx.test(emailPattern, 'user@EXAMPLE.COM')}`);
 console.log(`Matches "user@example.com": ${prx.test(emailPattern, 'user@example.com')}`);
@@ -81,7 +81,7 @@ console.log(`Matches ".jpg": ${prx.test(filePattern, '.jpg')}`);
 console.log();
 
 // Password validation with specific words
-const passwordPattern = 'start(?!string(password, caseinsensitive))(?!string(123, caseinsensitive))[charU+charL+0-9+char(!@#$%^&*)]{8,}end';
+const passwordPattern = 'start(?!string(password, caseinsensitive))(?!string(123, caseinsensitive))[charU+charL+0-9+char(!)+char(@)+char(#)+char($)+char(%)+char(^)+char(&)+char(*)]{8,}end';
 console.log(`Password Pattern: ${passwordPattern}`);
 console.log(`Matches "MyPass123!": ${prx.test(passwordPattern, 'MyPass123!')}`);
 console.log(`Matches "password123": ${prx.test(passwordPattern, 'password123')}`);
@@ -101,7 +101,7 @@ console.log(`Matches "Goodbye": ${prx.test(greetingPattern, 'Goodbye')}`);
 console.log();
 
 // Phone number with optional country code
-const phonePattern = 'string(+1, caseinsensitive)?string(\\()?[0-9]{3}string(\\))?[char( )-]?[0-9]{3}[char( )-]?[0-9]{4}';
+const phonePattern = '[0-9]{3}[char( )-]?[0-9]{3}[char( )-]?[0-9]{4}';
 console.log(`Phone Pattern: ${phonePattern}`);
 console.log(`Matches "+1 (555) 123-4567": ${prx.test(phonePattern, '+1 (555) 123-4567')}`);
 console.log(`Matches "(555) 123-4567": ${prx.test(phonePattern, '(555) 123-4567')}`);
@@ -110,7 +110,7 @@ console.log(`Matches "555 123 4567": ${prx.test(phonePattern, '555 123 4567')}`)
 console.log();
 
 // Date format validation
-const datePattern = 'string(2023, caseinsensitive)string(-)string(12, caseinsensitive)string(-)string(25, caseinsensitive)';
+const datePattern = '[0-9]{4}char(-)[0-9]{2}char(-)[0-9]{2}';
 console.log(`Date Pattern: ${datePattern}`);
 console.log(`Matches "2023-12-25": ${prx.test(datePattern, '2023-12-25')}`);
 console.log(`Matches "2023-12-26": ${prx.test(datePattern, '2023-12-26')}`);

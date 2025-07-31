@@ -163,12 +163,8 @@ class PrettyRegex {
             }
             
             if (isInGroupWithQuantifier) {
-              // Use word boundaries for OR contexts in groups with quantifiers
-              if (/\w/.test(parsedString)) {
-                result += `\\b${parsedString}\\b`;
-              } else {
-                result += parsedString;
-              }
+              // In groups with quantifiers, don't add word boundaries to allow concatenation
+              result += parsedString;
             } else {
               // Use start/end anchors for standalone OR contexts
               result += `^${parsedString}$`;
@@ -554,13 +550,13 @@ class PrettyRegex {
    * @returns {string} - Parsed character class or lookahead combination
    */
   parseCharacterClass(content) {
-    // Check if this contains MUST requirements (& operators)
-    if (content.includes('&')) {
+    // Check if this contains MUST requirements (& operators) - but not inside char() calls
+    if (content.includes('&') && !this.hasCharWithSpecialChar(content, '&')) {
       return this.parseMustCharacterClass(content);
     }
     
-    // Check if this contains AND/OR (union) bridges (+ operators)  
-    if (content.includes('+')) {
+    // Check if this contains AND/OR (union) bridges (+ operators) - but not inside char() calls
+    if (content.includes('+') && !this.hasCharWithSpecialChar(content, '+')) {
       return this.parseAndOrCharacterClass(content);
     }
     
@@ -569,6 +565,19 @@ class PrettyRegex {
     let i = 0;
     
     while (i < content.length) {
+      // Handle char() literals FIRST to avoid conflicts with 'char' pattern
+      if (content.substring(i).startsWith('char(')) {
+        const closeParenIndex = content.indexOf(')', i + 5);
+        if (closeParenIndex === -1) {
+          throw new Error('Unclosed char() in character class');
+        }
+        
+        const literalChar = content.substring(i + 5, closeParenIndex);
+        result += this.escapeInCharClass(literalChar);
+        i = closeParenIndex + 1;
+        continue;
+      }
+      
       // Check for predefined character classes - order by length to avoid partial matches
       let foundPattern = false;
       const sortedPatterns = Object.entries(this.charClasses).sort((a, b) => b[0].length - a[0].length);
@@ -587,19 +596,6 @@ class PrettyRegex {
       }
       
       if (foundPattern) {
-        continue;
-      }
-      
-      // Handle char() literals
-      if (content.substring(i).startsWith('char(')) {
-        const closeParenIndex = content.indexOf(')', i + 5);
-        if (closeParenIndex === -1) {
-          throw new Error('Unclosed char() in character class');
-        }
-        
-        const literalChar = content.substring(i + 5, closeParenIndex);
-        result += this.escapeInCharClass(literalChar);
-        i = closeParenIndex + 1;
         continue;
       }
       
@@ -924,6 +920,31 @@ class PrettyRegex {
       return true;
     }
     
+    return false;
+  }
+
+  /**
+   * Check if a character class content contains a special character inside char() calls
+   * @param {string} content - Character class content
+   * @param {string} specialChar - Special character to check for
+   * @returns {boolean} - Whether the special char is inside a char() call
+   */
+  hasCharWithSpecialChar(content, specialChar) {
+    let i = 0;
+    while (i < content.length) {
+      if (content.substring(i).startsWith('char(')) {
+        const closeParenIndex = content.indexOf(')', i + 5);
+        if (closeParenIndex !== -1) {
+          const charContent = content.substring(i + 5, closeParenIndex);
+          if (charContent.includes(specialChar)) {
+            return true;
+          }
+        }
+        i = closeParenIndex !== -1 ? closeParenIndex + 1 : content.length;
+      } else {
+        i++;
+      }
+    }
     return false;
   }
 
