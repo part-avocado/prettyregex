@@ -1,35 +1,47 @@
-# Pretty RegEx (PRX)
+# PRX-RegEx
 
-A simplified syntax for creating regular expressions with human-readable patterns. Pretty RegEx makes regex accessible by providing intuitive keywords and structure while maintaining the full power of regular expressions.
+> **Human-readable regular expressions** - Write complex regex patterns using simple, intuitive syntax
+
+[![npm version](https://badge.fury.io/js/prx-regex.svg)](https://badge.fury.io/js/prx-regex)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
+
+Transform complex regular expressions into readable, maintainable code. PRX-RegEx provides a simplified syntax that makes regex patterns accessible to everyone.
 
 ## Features
 
-- **Human-readable syntax**: Use words like `charU`, `charL`, `0-9` instead of regex symbols
-- **Comprehensive character classes**: Built-in shortcuts for common patterns
-- **Advanced regex features**: Lookaheads, lookbehinds, Unicode support, and more
-- **TypeScript support**: Full type definitions included
-- **Zero dependencies**: Lightweight and fast
-- **Common patterns**: Pre-built patterns for emails, URLs, phone numbers, etc.
-- **Error handling**: Graceful error handing with position information
+- **Human-readable syntax** - Write `[charU+charL+0-9]+` instead of `[A-Za-z0-9]+`
+- **MUST requirements** - Use `&` to enforce all character types: `[charU&charL&0-9]`
+- **Union operations** - Use `+` for traditional union: `[charU+charL+0-9]`
+- **Character ranges** - Support for `[0-9]`, `[a-z]`, `[a-E]` (mixed case)
+- **Production-ready** - Comprehensive error handling and validation
+- **Debug tools** - Built-in debugging and performance analysis
+- **TypeScript support** - Full type definitions included
 
-## Installation
+## Quick Start
 
-(NOT YET PUBLISHED)
+### Installation
+
 ```bash
 npm install prx-regex
 ```
 
-## Quick Start
+### Basic Usage
 
 ```javascript
 const PrettyRegex = require('prx-regex');
 
-// Basic usage
+// Email validation - simple and readable!
 const emailPattern = '[charU+charL+0-9]+char(@)[charU+charL+0-9]+char(.)[charL]{2,}';
 const emailRegex = PrettyRegex.compile(emailPattern);
-console.log(emailRegex.test('user@example.com')); // true
 
-// With validation and error handling
+console.log(emailRegex.test('user@example.com')); // true
+console.log(emailRegex.test('invalid-email')); // false
+```
+
+### Advanced Usage with Validation
+
+```javascript
 const prx = new PrettyRegex({
   validatePatterns: true,
   throwOnError: true,
@@ -37,8 +49,12 @@ const prx = new PrettyRegex({
 });
 
 try {
-  const regex = prx.compile('[charU&charL&0-9]{8,}');
-  console.log('Strong password pattern compiled successfully');
+  // Strong password: MUST contain uppercase, lowercase, digits, and special chars
+  const strongPassword = '[charU&charL&0-9&char(!)]{8,}';
+  const regex = prx.compile(strongPassword);
+  
+  console.log(regex.test('Password123!')); // true
+  console.log(regex.test('password123!')); // false (missing uppercase)
 } catch (error) {
   console.log('Validation error:', error.message);
   console.log('Suggestion:', error.details.suggestion);
@@ -54,7 +70,7 @@ try {
 | `charU` | `[A-Z]` | Uppercase letters |
 | `charL` | `[a-z]` | Lowercase letters |
 | `char` | `[a-zA-Z]` | Any letter |
-| `digit` | `[0-9]` | Digits (alternative) |
+| `0-9` | `[0-9]` | Digits |
 | `space` | ` ` | Literal space |
 | `tab` | `\t` | Tab character |
 | `newline` | `\n` | Newline character |
@@ -64,7 +80,7 @@ try {
 
 ### Character Ranges
 
-You can use traditional character ranges inside square brackets:
+Traditional character ranges work seamlessly:
 
 | PRX Syntax | Regex Equivalent | Description |
 |------------|------------------|-------------|
@@ -74,27 +90,33 @@ You can use traditional character ranges inside square brackets:
 | `[A-E]` | `[A-E]` | Uppercase letters A through E |
 | `[a-E]` | `[a-eA-E]` | Mixed case range (a-e and A-E) |
 
-**Note**: Ranges must be in ascending order (e.g., `[0-9]` works, `[9-0]` doesn't).
+### Operators
 
-### Operator Precedence
+#### MUST Requirements (`&`)
+Enforce that **all** specified character types must be present:
 
-The `+` character has different meanings based on context:
-- **Outside character classes**: `+` is a **quantifier** (one or more)
-- **Inside character classes**: `+` is a **union operator** (OR)
-
-Examples:
 ```javascript
-'char+'           // Quantifier: one or more letters
-'[charU+charL]'   // Union: uppercase OR lowercase
-'[charU+charL]+'  // Union inside + quantifier outside = one or more letters
-'[0-2+charU]+'    // Range + union + quantifier = one or more digits 0-2 OR uppercase
+// Password MUST contain uppercase AND lowercase AND digits
+const strongPassword = '[charU&charL&0-9]{8,}';
+console.log(PrettyRegex.test(strongPassword, 'Password123')); // true
+console.log(PrettyRegex.test(strongPassword, 'password123')); // false (missing uppercase)
+```
+
+#### Union Operations (`+`)
+Traditional union behavior - may contain any of the specified types:
+
+```javascript
+// Username may contain letters OR numbers OR underscores
+const username = '[charU+charL+0-9+char(_)]{3,20}';
+console.log(PrettyRegex.test(username, 'user123')); // true
+console.log(PrettyRegex.test(username, 'user_name')); // true
 ```
 
 ### Quantifiers
 
 | PRX Syntax | Regex Equivalent | Description |
 |------------|------------------|-------------|
-| `+` | `+` | One or more (quantifier) |
+| `+` | `+` | One or more |
 | `*` | `*` | Zero or more |
 | `?` | `?` | Zero or one |
 | `{3}` | `{3}` | Exactly 3 times |
@@ -114,273 +136,166 @@ Examples:
 Use `char(x)` to match literal characters that might have special meaning:
 
 ```javascript
-// Match literal parentheses, dots, and plus signs
-const pattern = 'char(()0-9{3}char()) 0-9{3}char(-)0-9{4}';
-// Matches: (123) 456-7890
+// Phone number: (123) 456-7890
+const phone = 'char(\\()0-9{3}char(\\))char( )0-9{3}char(-)0-9{4}';
+console.log(PrettyRegex.test(phone, '(555) 123-4567')); // true
 ```
 
-### Character Class Combinations
+## Real-World Examples
 
-#### MUST Requirements (`&` operator)
-
-The `&` operator inside square brackets creates **MUST requirements** - the string must contain ALL specified character types:
+### Email Validation
 
 ```javascript
-const pattern = '[charU&charL&0-9]';
-// String MUST contain: uppercase letters AND lowercase letters AND digits
-// Examples: "User123" ✅, "user123" ❌ (missing uppercase), "USER123" ❌ (missing lowercase)
-
-const strongPassword = '[charU&charL&0-9&char(!)]{8,}';
-// Password MUST contain uppercase, lowercase, digits, and exclamation mark
-
-// Using ranges with MUST requirements
-const digitRange = '[0-2&charU]+';
-// MUST contain digits 0-2 AND uppercase letters
-// Examples: "A1" ✅, "B2" ✅, "a1" ❌ (missing uppercase), "A3" ❌ (3 not in range)
+// Flexible email pattern
+const email = '[charU+charL+0-9+char(.)+char(_)+char(-)]+char(@)[charU+charL+0-9+char(.)+char(-)]+char(.)[charL]{2,}';
+console.log(PrettyRegex.test(email, 'user.name@domain.com')); // true
+console.log(PrettyRegex.test(email, 'user-name@sub.domain.co.uk')); // true
 ```
 
-#### AND/OR Union (`+` operator)
-
-The `+` operator creates a **union** - may only contain these character types:
+### URL Validation
 
 ```javascript
-const pattern = '[charU+charL+0-9]';
-// May only contain: uppercase OR lowercase OR digits (traditional union)
-// Examples: "User123" ✅, "user123" ✅, "Test@123" ❌ (@ not allowed)
-
-const emailPart = '[charU+charL+0-9+char(.)+char(-)]';
-// May only contain letters, numbers, dots, and dashes
-
-// Using ranges with Union requirements
-const mixedRange = '[a-E+0-9]+';
-// May only contain letters a-E (both cases) OR digits
-// Examples: "a1" ✅, "B2" ✅, "c9" ✅, "f5" ❌ (f not in a-E range)
+// HTTP/HTTPS URL
+const url = 'char(h)char(t)char(t)char(p)char(s)?char(:)char(/)char(/)[charU+charL+0-9+char(.)+char(-)]+';
+console.log(PrettyRegex.test(url, 'https://example.com')); // true
+console.log(PrettyRegex.test(url, 'http://sub-domain.example.co.uk')); // true
 ```
 
-#### Simple Character Classes
-
-For basic character classes without special operators:
+### Strong Password Validation
 
 ```javascript
-const pattern = '[charUcharL0-9]';  // Same as [charU+charL+0-9] - union behavior
-// This is the traditional way without explicit + operator
+// MUST contain uppercase, lowercase, digits, and special characters
+const strongPassword = '[charU&charL&0-9&char(!@#$%^&*)]{8,}';
+console.log(PrettyRegex.test(strongPassword, 'Password123!')); // true
+console.log(PrettyRegex.test(strongPassword, 'password123!')); // false (missing uppercase)
+console.log(PrettyRegex.test(strongPassword, 'Password123')); // false (missing special char)
+```
+
+### Date and Time Formats
+
+```javascript
+// Date: YYYY-MM-DD
+const date = '0-9{4}char(-)0-9{2}char(-)0-9{2}';
+console.log(PrettyRegex.test(date, '2023-12-25')); // true
+
+// Time: HH:MM
+const time = '0-9{2}char(:)0-9{2}';
+console.log(PrettyRegex.test(time, '14:30')); // true
+```
+
+### PrettyRegex Class
+
+#### Constructor
+```javascript
+const prx = new PrettyRegex({
+  validatePatterns: true,  // Enable pattern validation
+  throwOnError: true,      // Throw errors instead of warnings
+  logWarnings: true        // Log warnings to console
+});
+```
+
+#### Core Methods
+
+**`compile(pattern, flags?)`**
+```javascript
+const regex = prx.compile('[charU+charL]+', 'i');
+// Returns: RegExp object
+```
+
+**`test(pattern, string, flags?)`**
+```javascript
+const isValid = prx.test('[charU+charL]+', 'Hello');
+// Returns: boolean
+```
+
+**`match(pattern, string, flags?)`**
+```javascript
+const matches = prx.match('[charU+charL]+', 'Hello World');
+// Returns: ['Hello', 'World']
+```
+
+**`replace(pattern, string, replacement, flags?)`**
+```javascript
+const result = prx.replace('[charU+charL]+', 'Hello World', '***');
+// Returns: '*** ***'
+```
+
+#### Static Methods
+
+All methods are available as static methods for convenience:
+
+```javascript
+// Static usage
+const regex = PrettyRegex.compile('[charU+charL]+');
+const isValid = PrettyRegex.test('[charU+charL]+', 'Hello');
+const matches = PrettyRegex.match('[charU+charL]+', 'Hello World');
+```
+
+#### Utility Methods
+
+**`validate(pattern)`**
+```javascript
+const validation = prx.validate('[charU+charL');
+console.log(validation.isValid); // false
+console.log(validation.errors); // Array of error messages
+```
+
+**`debug(pattern)`**
+```javascript
+const debugInfo = prx.debug('[charU+charL]+');
+console.log(debugInfo.compiled); // Compiled regex string
+console.log(debugInfo.features); // Detected features
+```
+
+**`getSuggestions(pattern)`**
+```javascript
+const suggestions = prx.getSuggestions('[charU+charL');
+console.log(suggestions); // Array of improvement suggestions
+```
+
+## Error Handling
+
+PRX-RegEx provides comprehensive error handling with detailed messages:
+
+```javascript
+try {
+  const regex = prx.compile('[charU+charL'); // Missing closing bracket
+} catch (error) {
+  console.log(error.name); // 'CharacterClassError'
+  console.log(error.message); // 'Unclosed character class'
+  console.log(error.code); // Error code for programmatic handling
+  console.log(error.details); // Additional error details
+}
 ```
 
 ## Advanced Features
 
-### Error Handling & Validation
+### AdvancedPrettyRegex Class
 
-Pretty RegEx provides comprehensive error handling and validation:
-
-```javascript
-const prx = new PrettyRegex({
-  validatePatterns: true,  // Enable pattern validation
-  throwOnError: true,      // Throw errors on validation failures
-  logWarnings: true        // Log performance warnings
-});
-
-// Validate patterns before compilation
-const validation = prx.validate('[charU+charL]');
-if (!validation.isValid) {
-  console.log('Errors:', validation.errors.map(e => e.message));
-  console.log('Warnings:', validation.warnings.map(w => w.message));
-}
-```
-
-### Debug Utilities
-
-Debug patterns to understand compilation:
-
-```javascript
-const debugInfo = PrettyRegex.debug('[charU&charL&0-9]{8,}');
-console.log(debugInfo);
-// {
-//   original: '[charU&charL&0-9]{8,}',
-//   parsed: '(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[A-Za-z0-9]{8,}',
-//   compiled: '/(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[A-Za-z0-9]{8,}/',
-//   validation: { isValid: true, errors: [], warnings: [] },
-//   suggestions: [],
-//   isValid: true
-// }
-```
-
-### Performance Suggestions
-
-Get suggestions for optimizing patterns:
-
-```javascript
-const suggestions = PrettyRegex.getSuggestions('[ABCDEFGHIJKLMNOPQRSTUVWXYZ]+');
-console.log(suggestions);
-// ['Consider using charU instead of [ABCDEFGHIJKLMNOPQRSTUVWXYZ]']
-```
-
-### Static Methods
-
-Use static methods for quick operations:
-
-```javascript
-// Quick test
-const isValid = PrettyRegex.test('[charU+charL]+', 'Hello'); // true
-
-// Quick match
-const matches = PrettyRegex.match('[charU]+', 'Hello World'); // ['H', 'W']
-
-// Quick replace
-const replaced = PrettyRegex.replace('[charU]', 'Hello World', 'X'); // 'Xello Xorld'
-
-// Quick validation
-const validation = PrettyRegex.validate('[charU+charL]');
-
-// Quick debug
-const debug = PrettyRegex.debug('[0-9]+');
-```
-
-## Examples
-
-```javascript
-const PrettyRegex = require('prx-regex');
-
-// Username: letters, numbers, underscore, 3-20 characters
-const username = '[charU+charL+0-9+char(_)]{3,20}';
-console.log(PrettyRegex.test(username, 'user123')); // true
-
-// Phone number: (123) 456-7890 or 123-456-7890
-const phone = 'char(\\()?0-9{3}char(\\))?char( |-)?0-9{3}char(-)?0-9{4}';
-console.log(PrettyRegex.test(phone, '(555) 123-4567')); // true
-
-// URL starting with http or https
-const url = 'char(h)char(t)char(t)char(p)char(s)?char(:)char(/)char(/)[charU+charL+0-9+char(.)+char(-)]+';
-console.log(PrettyRegex.test(url, 'https://example.com')); // true
-```
-
-### MUST (&) Requirements Examples
-
-```javascript
-// Strong password: MUST contain uppercase, lowercase, digits, and special chars
-const strongPassword = '[charU&charL&0-9&char(!)]{8,}';
-console.log(PrettyRegex.test(strongPassword, 'Password123!')); // true
-console.log(PrettyRegex.test(strongPassword, 'password123!')); // false (missing uppercase)
-console.log(PrettyRegex.test(strongPassword, 'Password123'));  // false (missing special chars)
-
-// Username: MUST contain uppercase, lowercase, and numbers
-const username = '[charU&charL&0-9]{3,15}';
-console.log(PrettyRegex.test(username, 'User123'));  // true
-console.log(PrettyRegex.test(username, 'user123'));  // false (missing uppercase)
-console.log(PrettyRegex.test(username, 'USERNAME123')); // false (missing lowercase)
-
-// Product code: MUST have letters and numbers and dashes
-const productCode = '[charU&char&0-9&char(-)]{6,10}';
-console.log(PrettyRegex.test(productCode, 'ABC-123')); // true
-console.log(PrettyRegex.test(productCode, 'ABC123'));  // false (missing dash)
-```
-
-### AND/OR Union Examples
-
-```javascript
-// Flexible input: may only contain letters, numbers, and basic punctuation
-const flexibleInput = '[charU+charL+0-9+char(.)+char(-)+char(_)]+';
-console.log(PrettyRegex.test(flexibleInput, 'User123')); // true
-console.log(PrettyRegex.test(flexibleInput, 'file-name.txt')); // true
-console.log(PrettyRegex.test(flexibleInput, 'test@domain.com')); // false (@ not allowed)
-
-// Safe filename: only letters, numbers, dashes, underscores
-const safeFilename = '[charU+charL+0-9+char(-)+char(_)]+';
-console.log(PrettyRegex.test(safeFilename, 'my-file_123')); // true
-console.log(PrettyRegex.test(safeFilename, 'file name.txt')); // false (space and . not allowed)
-```
-
-### Advanced Patterns with Grouping
-
-```javascript
-// IP Address (simplified)
-const ip = '0-9{1,3}char(.)0-9{1,3}char(.)0-9{1,3}char(.)0-9{1,3}';
-
-// Date in YYYY-MM-DD format
-const date = '0-9{4}char(-)0-9{2}char(-)0-9{2}';
-
-// Time in HH:MM format
-const time = '0-9{2}char(:)0-9{2}';
-
-// Combining patterns with OR
-const dateOrTime = `(${date}|${time})`;
-console.log(PrettyRegex.test(dateOrTime, '2023-12-25')); // true
-console.log(PrettyRegex.test(dateOrTime, '14:30')); // true
-```
-
-### Email Example
-
-```javascript
-// Two approaches for email validation:
-
-// 1. MUST Requirements (&) - Local part MUST contain all character types
-const strictEmailPattern = [
-  '[charU&charL&0-9]',        // Local MUST have uppercase AND lowercase AND digits
-  '+',                        // One or more
-  'char(@)',                  // @ symbol
-  '[charU+charL+0-9+char(.)+char(-)]', // Domain may contain letters, numbers, dots, dashes
-  '+',                        // One or more  
-  'char(.)',                  // Dot
-  '[charL]',                  // TLD (lowercase only)
-  '{2,}'                      // At least 2 chars
-].join('');
-
-// 2. Union Requirements (+) - May only contain these character types (flexible)
-const flexibleEmailPattern = [
-  '[charU+charL+0-9+char(.)+char(_)+char(%)+char(+)+char(-)]', // Local part (union)
-  '+',                                                          // One or more
-  'char(@)',                                                    // @ symbol
-  '[charU+charL+0-9+char(.)+char(-)]',                         // Domain (union)
-  '+',                                                          // One or more
-  'char(.)',                                                    // Dot
-  '[charL]',                                                    // TLD (lowercase only)
-  '{2,}'                                                        // At least 2 chars
-].join('');
-
-const emails = [
-  'User123@example.com',    // Strict: ✓ (local has all types), Flexible: ✓
-  'user@example.com',       // Strict: ✗ (missing uppercase), Flexible: ✓
-  'test.email@domain.org',  // Strict: ✗ (missing digits), Flexible: ✓  
-  'user@invalid!.com',      // Strict: ✗, Flexible: ✗ (! not allowed)
-];
-
-console.log('Strict email validation (MUST requirements):');
-emails.forEach(email => {
-  console.log(`${email}: ${PrettyRegex.test(strictEmailPattern, email)}`);
-});
-
-console.log('\nFlexible email validation (Union requirements):');  
-emails.forEach(email => {
-  console.log(`${email}: ${PrettyRegex.test(flexibleEmailPattern, email)}`);
-});
-```
-
-## Advanced Features 2.0
-
-For complex patterns, use the `AdvancedPrettyRegex` class:
+For complex patterns with lookaheads, lookbehinds, and advanced features:
 
 ```javascript
 const { AdvancedPrettyRegex } = require('prx-regex');
 const advanced = new AdvancedPrettyRegex();
 
-// Lookaheads for password validation
+// Password with lookaheads
 const strongPassword = 'lookahead(.*[charL])lookahead(.*[charU])lookahead(.*0-9)any{8,}';
 console.log(advanced.parseAdvanced(strongPassword));
 // Result: (?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{8,}
 
-// Pre-built common patterns
+// Pre-built patterns
 const emailRegex = advanced.parseAdvanced('email');
 const urlRegex = advanced.parseAdvanced('url');
 const phoneRegex = advanced.parseAdvanced('phone');
 ```
 
-### Built-in Advanced Patterns
+### Built-in Patterns
 
 | Pattern | Description |
 |---------|-------------|
 | `email` | Email address validation |
 | `url` | HTTP/HTTPS URL validation |
 | `ipv4` | IPv4 address |
-| `ipv6` | IPv6 address |
 | `phone` | US phone number |
 | `creditcard` | Credit card number |
 | `ssn` | Social Security Number |
@@ -388,113 +303,37 @@ const phoneRegex = advanced.parseAdvanced('phone');
 | `hexcolor` | Hex color code |
 | `date` | Date in YYYY-MM-DD |
 | `time24` | 24-hour time format |
-| `time12` | 12-hour time format |
-
-## 🛠️ API Reference
-
-### PrettyRegex Class
-
-#### Constructor
-```javascript
-const prx = new PrettyRegex();
-```
-
-#### Methods
-
-**`compile(pattern, flags?)`**
-- Compiles a PRX pattern to a RegExp object
-- Returns: `RegExp`
-
-**`parse(pattern)`**
-- Converts PRX syntax to regex string
-- Returns: `string`
-
-**`test(pattern, string, flags?)`**
-- Tests if string matches pattern
-- Returns: `boolean`
-
-**`match(pattern, string, flags?)`**
-- Finds all matches in string
-- Returns: `string[]`
-
-**`replace(pattern, string, replacement, flags?)`**
-- Replaces matches with replacement
-- Returns: `string`
-
-#### Static Methods
-
-All instance methods are available as static methods:
-
-```javascript
-PrettyRegex.compile(pattern, flags);
-PrettyRegex.test(pattern, string, flags);
-PrettyRegex.match(pattern, string, flags);
-PrettyRegex.replace(pattern, string, replacement, flags);
-```
-
-### AdvancedPrettyRegex Class
-
-Additional methods for advanced regex features:
-
-**`parseAdvanced(pattern)`**
-- Parses advanced PRX patterns
-- Returns: `string`
-
-**`validateAdvanced(pattern)`**
-- Validates pattern and returns errors/warnings
-- Returns: `{errors: string[], warnings: string[]}`
-
-**`suggestFlags(pattern)`**
-- Suggests appropriate RegExp flags
-- Returns: `string`
-
-## TypeScript Support
-
-Full TypeScript definitions are included:
-
-```typescript
-import PrettyRegex, { AdvancedPrettyRegex, PRXPattern } from 'pretty-regex';
-
-const pattern: PRXPattern = '[charU+charL+0-9]+';
-const regex: RegExp = PrettyRegex.compile(pattern, 'gi');
-const isValid: boolean = regex.test('Hello123');
-```
 
 ## Testing
 
-Run the test suite:
+Run the comprehensive test suite:
 
 ```bash
 npm test
+npm run test:coverage
 ```
 
-The package includes comprehensive tests for:
-- Basic character classes and quantifiers
-- Complex pattern combinations
-- Advanced regex features
-- Error handling
-- TypeScript definitions
+## Installation
+
+```bash
+# Using npm
+npm install prx-regex
+
+# Using yarn
+yarn add prx-regex
+
+# Using pnpm
+pnpm add prx-regex
+```
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes and add tests
-4. Run tests: `npm test`
-5. Commit changes: `git commit -am 'Add feature'`
-6. Push to branch: `git push origin feature-name`
-7. Submit a pull request
-
-## Next Steps
-
-- [ ] More built-in patterns (credit cards, addresses, etc.)
-- [ ] Performance optimizations
-- [ ] Browser compatibility testing
-- [ ] String matching (similar to char(), but for strings)
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ## License
 
-MIT License - see the [LICENSE](LICENSE) file for details
+MIT License - see the [LICENSE](LICENSE) file for details.
 
-Inspired by the need for human-readable regex patterns and for developers who find regex intimidating.
-Special thanks to the regex community for creating a pain in my ass.
+---
+
+**Made with ❤️ for developers who can't read regex ;)**
