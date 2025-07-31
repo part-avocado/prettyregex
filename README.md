@@ -4,7 +4,7 @@
 ![NPM Last Update](https://img.shields.io/npm/last-update/prx-regex)
 ![GitHub last commit](https://img.shields.io/github/last-commit/part-avocado/prettyregex)
 ![GitHub commits since latest release](https://img.shields.io/github/commits-since/part-avocado/prettyregex/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Human-readable regular expressions** - Write complex regex patterns using simple, intuitive syntax
 
