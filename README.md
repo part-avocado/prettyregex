@@ -1,8 +1,10 @@
 # PRX-RegEx
 
+![GitHub repo size](https://img.shields.io/github/repo-size/part-avocado/prettyregex)
 [![Version](https://badge.fury.io/js/prx-regex.svg)](https://badge.fury.io/js/prx-regex)
+![GitHub commits since latest release](https://img.shields.io/github/commits-since/part-avocado/prettyregex/latest)
+![GitHub last commit](https://img.shields.io/github/last-commit/part-avocado/prettyregex)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](https://nodejs.org/)
 
 > **Human-readable regular expressions** - Write complex regex patterns using simple, intuitive syntax
 
@@ -416,6 +418,40 @@ Run the comprehensive test suite:
 npm test
 npm run test:coverage
 ```
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment. The following workflows are configured:
+
+### Automated Checks
+
+- **Tests**: Runs on Node.js versions 14.x, 16.x, 18.x, and 20.x
+- **Linting**: ESLint checks for code quality and consistency
+- **Security**: npm audit for vulnerability scanning
+- **Build**: Verifies the package builds correctly
+- **Coverage**: Generates and uploads test coverage reports
+
+### Pull Request Requirements
+
+Before a pull request can be merged, it must pass:
+
+1. ✅ All tests passing
+2. ✅ Linting checks passing
+3. ✅ Security audit passing
+4. ✅ Build verification
+5. ✅ No console.log statements in production code
+6. ✅ No TODO/FIXME comments in production code
+
+### Branch Protection
+
+The `main` branch is protected with the following rules:
+- Requires pull request reviews
+- Requires status checks to pass
+- Requires branches to be up to date
+- Requires conversation resolution
+- Requires signed commits (recommended)
+
+See [`.github/branch-protection.md`](.github/branch-protection.md) for detailed configuration instructions.
 
 ## Installation
 
