@@ -78,7 +78,7 @@ class PrettyRegex {
 
       // Check if pattern contains case insensitive string literals
       const hasCaseInsensitive = /string\([^)]*,\s*(caseinsensitive|ci|nocase)/i.test(prxPattern);
-      const finalFlags = hasCaseInsensitive ? flags + 'i' : flags;
+      const finalFlags = hasCaseInsensitive ? `${flags}i` : flags;
 
       const regexPattern = this.parse(prxPattern);
       return new RegExp(regexPattern, finalFlags);
@@ -158,7 +158,9 @@ class PrettyRegex {
             
             // Debug logging
             if (this.options.logWarnings) {
+              // eslint-disable-next-line no-console
               console.log('OR context - Position:', i);
+              // eslint-disable-next-line no-console
               console.log('OR context - Is in group with quantifier:', isInGroupWithQuantifier);
             }
             
