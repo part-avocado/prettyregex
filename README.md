@@ -424,31 +424,12 @@ This project uses GitHub Actions for continuous integration and deployment. The 
 
 ### Automated Checks
 
-- **Tests**: Runs on Node.js versions 16.x, 18.x, 20.x, and 22.x
+- **Tests**: Runs on Node.js versions 18.x, 18.x, 20.x
 - **Linting**: ESLint checks for code quality and consistency
 - **Security**: npm audit for vulnerability scanning
 - **Build**: Verifies the package builds correctly
 - **Coverage**: Generates and uploads test coverage reports
 
-### Pull Request Requirements
-
-Before a pull request can be merged, it must pass:
-
-1. ✅ All tests passing
-2. ✅ Linting checks passing
-3. ✅ Security audit passing
-4. ✅ Build verification
-5. ✅ No console.log statements in production code
-6. ✅ No TODO/FIXME comments in production code
-
-### Branch Protection
-
-The `main` branch is protected with the following rules:
-- Requires pull request reviews
-- Requires status checks to pass
-- Requires branches to be up to date
-- Requires conversation resolution
-- Requires signed commits (recommended)
 
 See [`.github/branch-protection.md`](.github/branch-protection.md) for detailed configuration instructions.
 
