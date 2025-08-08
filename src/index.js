@@ -26,7 +26,8 @@ class PrettyRegex {
       'start': '^',
       'end': '$',
       'word': '\\b',
-      'notword': '\\B'
+      'notword': '\\B',
+      'emoji': '[\\u{1F600}-\\u{1F64F}]'
     };
     
     this.quantifiers = {
@@ -265,22 +266,81 @@ class PrettyRegex {
         }
         
         const quantifier = prxPattern.substring(i, closeIndex + 1);
-        result += quantifier;
+        // Fix incomplete quantifiers like {,8} to {0,8}
+        const fixedQuantifier = this.fixQuantifier(quantifier);
+        result += fixedQuantifier;
         i = closeIndex + 1;
         continue;
       }
       
       // Handle grouping
       if (char === '(') {
-        result += '(';
-        i++;
+        // Find the matching closing parenthesis
+        let parenCount = 1;
+        let j = i + 1;
+        let groupContent = '';
+        
+        while (j < prxPattern.length && parenCount > 0) {
+          if (prxPattern[j] === '(') {
+            parenCount++;
+          } else if (prxPattern[j] === ')') {
+            parenCount--;
+          }
+          
+          if (parenCount > 0) {
+            groupContent += prxPattern[j];
+          }
+          j++;
+        }
+        
+        if (parenCount > 0) {
+          throw new ParseError(
+            'Unclosed parentheses',
+            i,
+            prxPattern.substring(i, i + 10)
+          );
+        }
+        
+        // Parse the group content
+        const parsedGroup = this.parseGroupContent(groupContent);
+        
+        // If this is a MUST group (contains &), we need to apply lookaheads at the string level
+        if (groupContent.includes('&')) {
+          const lookaheads = this.extractLookaheadsFromGroup(groupContent);
+          
+          // Check if the next character is a quantifier
+          let quantifier = '';
+          if (j < prxPattern.length && prxPattern[j] === '{') {
+            const quantifierEnd = prxPattern.indexOf('}', j);
+            if (quantifierEnd !== -1) {
+              quantifier = prxPattern.substring(j, quantifierEnd + 1);
+              const fixedQuantifier = this.fixQuantifierForMustGroup(quantifier);
+              
+              // For MUST groups with quantifiers, restructure the pattern
+              // Apply lookaheads to the entire matched sequence
+              result += `(?:${lookaheads}(${parsedGroup}))${fixedQuantifier}`;
+              i = quantifierEnd + 1;
+              continue;
+            }
+          }
+          
+          // If no quantifier, apply lookaheads to the group itself
+          result += `(?:${lookaheads}(${parsedGroup}))`;
+        } else {
+          result += `(${parsedGroup})`;
+        }
+        
+        i = j;
         continue;
       }
       
       if (char === ')') {
-        result += ')';
-        i++;
-        continue;
+        // This should not happen as we handle it in the opening parenthesis
+        throw new ParseError(
+          'Unexpected closing parenthesis',
+          i,
+          prxPattern.substring(i, i + 5)
+        );
       }
       
       // Handle OR operator
@@ -320,6 +380,378 @@ class PrettyRegex {
     }
     
     return result;
+  }
+
+  /**
+   * Parse group content, handling & operator for MUST requirements
+   * @param {string} content - Content inside parentheses
+   * @returns {string} - Parsed group content
+   */
+  parseGroupContent(content) {
+    // Check if this contains MUST requirements (& operators)
+    if (content.includes('&')) {
+      return this.parseMustGroupContent(content);
+    }
+    
+    // Regular group content parsing (no special operators)
+    return this.parseRegularGroupContent(content);
+  }
+
+  /**
+   * Extract lookaheads from a group content for string-level application
+   * @param {string} content - Group content with & operators
+   * @returns {string} - Lookahead pattern for string-level application
+   */
+  extractLookaheadsFromGroup(content) {
+    // Split by & to get individual requirements
+    const requirements = content.split('&').map(req => req.trim()).filter(req => req.length > 0);
+    
+    if (requirements.length <= 1) {
+      return '';
+    }
+    
+    let result = '';
+    for (const requirement of requirements) {
+      const parsed = this.parseGroupRequirement(requirement);
+      if (parsed.lookahead) {
+        // Apply lookahead to the matched portion, not the entire string
+        result += `(?=.*${parsed.lookahead})`;
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Parse group content with MUST semantics using lookaheads
+   * @param {string} content - Group content with & operators
+   * @returns {string} - Character class pattern for the group
+   */
+  parseMustGroupContent(content) {
+    // Split by & to get individual requirements
+    const requirements = content.split('&').map(req => req.trim()).filter(req => req.length > 0);
+    
+    if (requirements.length <= 1) {
+      // No MUST requirements, fall back to regular parsing
+      return this.parseRegularGroupContent(content.replace('&', ''));
+    }
+    
+    const allCharClasses = [];
+    
+    for (const requirement of requirements) {
+      const parsed = this.parseGroupRequirement(requirement);
+      if (parsed.charClass) {
+        allCharClasses.push(parsed.charClass);
+      }
+    }
+    
+    // Combine all character classes into one - this represents the allowed character types
+    let combinedCharClass = '[';
+    for (const charClass of allCharClasses) {
+      if (charClass.startsWith('[') && charClass.endsWith(']')) {
+        // Remove brackets and add content
+        combinedCharClass += charClass.slice(1, -1);
+      } else {
+        // Add as-is
+        combinedCharClass += charClass;
+      }
+    }
+    combinedCharClass += ']';
+    
+    // Return just the character class - lookaheads will be applied at string level
+    return combinedCharClass;
+  }
+
+  /**
+   * Parse regular group content (no special operators)
+   * @param {string} content - Group content
+   * @returns {string} - Parsed group content
+   */
+  parseRegularGroupContent(content) {
+    let result = '';
+    let i = 0;
+    
+    while (i < content.length) {
+      // Handle string literals with string()
+      if (content.substring(i).startsWith('string(')) {
+        const closeParenIndex = content.indexOf(')', i + 7);
+        if (closeParenIndex === -1) {
+          throw new ParseError(
+            'Unclosed string() literal in group',
+            i,
+            content.substring(i, i + 15)
+          );
+        }
+        
+        const stringContent = content.substring(i + 7, closeParenIndex);
+        const parsedString = this.parseStringLiteral(stringContent);
+        result += parsedString;
+        i = closeParenIndex + 1;
+        continue;
+      }
+      
+      // Handle literal characters with char()
+      if (content.substring(i).startsWith('char(')) {
+        const closeParenIndex = content.indexOf(')', i + 5);
+        if (closeParenIndex === -1) {
+          throw new ParseError(
+            'Unclosed char() literal in group',
+            i,
+            content.substring(i, i + 10)
+          );
+        }
+        
+        const literalChar = content.substring(i + 5, closeParenIndex);
+        // Don't escape if it's already escaped (starts with backslash)
+        if (literalChar.startsWith('\\')) {
+          result += literalChar;
+        } else {
+          result += this.escapeLiteral(literalChar);
+        }
+        i = closeParenIndex + 1;
+        continue;
+      }
+      
+      // Handle character classes
+      if (content[i] === '[') {
+        const classEnd = content.indexOf(']', i);
+        if (classEnd === -1) {
+          throw new CharacterClassError(
+            'Unclosed character class in group',
+            content.substring(i)
+          );
+        }
+        
+        const classContent = content.substring(i + 1, classEnd);
+        result += this.parseCharacterClass(classContent);
+        i = classEnd + 1;
+        continue;
+      }
+      
+      // Handle quantifiers with {}
+      if (content[i] === '{') {
+        const closeIndex = content.indexOf('}', i);
+        if (closeIndex === -1) {
+          throw new QuantifierError(
+            'Unclosed quantifier in group',
+            content.substring(i, i + 10)
+          );
+        }
+        
+        const quantifier = content.substring(i, closeIndex + 1);
+        result += quantifier;
+        i = closeIndex + 1;
+        continue;
+      }
+      
+      // Handle OR operator
+      if (content[i] === '|') {
+        result += '|';
+        i++;
+        continue;
+      }
+      
+      // Handle quantifiers
+      if (this.quantifiers[content[i]]) {
+        result += this.quantifiers[content[i]];
+        i++;
+        continue;
+      }
+      
+      // Handle predefined patterns - order by length to avoid partial matches
+      let foundPattern = false;
+      const sortedPatterns = Object.entries(this.charClasses).sort((a, b) => b[0].length - a[0].length);
+      
+      for (const [pattern, replacement] of sortedPatterns) {
+        if (content.substring(i).startsWith(pattern)) {
+          result += replacement;
+          i += pattern.length;
+          foundPattern = true;
+          break;
+        }
+      }
+      
+      if (foundPattern) {
+        continue;
+      }
+      
+      // Handle literal characters
+      result += this.escapeLiteral(content[i]);
+      i++;
+    }
+    
+    return result;
+  }
+
+  /**
+   * Parse a single group requirement for MUST logic
+   * @param {string} requirement - Single requirement (e.g., 'charU', '0-9', 'char(.)')
+   * @returns {Object} - Object with lookahead and charClass properties
+   */
+  parseGroupRequirement(requirement) {
+    let i = 0;
+    let lookaheadClass = '';
+    const charClassParts = [];
+    
+    while (i < requirement.length) {
+      // Handle character classes first
+      if (requirement[i] === '[') {
+        const classEnd = requirement.indexOf(']', i);
+        if (classEnd === -1) {
+          throw new CharacterClassError(
+            'Unclosed character class in group requirement',
+            requirement.substring(i)
+          );
+        }
+        
+        const classContent = requirement.substring(i + 1, classEnd);
+        const parsedClass = this.parseCharacterClass(classContent);
+        lookaheadClass = parsedClass;
+        charClassParts.push(parsedClass);
+        i = classEnd + 1;
+        continue;
+      }
+      
+      // Handle char() literals FIRST to avoid conflicts with 'char' pattern
+      if (requirement.substring(i).startsWith('char(')) {
+        const closeParenIndex = requirement.indexOf(')', i + 5);
+        if (closeParenIndex === -1) {
+          throw new ParseError('Unclosed char() in group requirement', i, requirement.substring(i));
+        }
+        
+        const literalChar = requirement.substring(i + 5, closeParenIndex);
+        // Don't escape if it's already escaped (starts with backslash)
+        const finalChar = literalChar.startsWith('\\') ? literalChar : this.escapeLiteral(literalChar);
+        lookaheadClass = finalChar;
+        charClassParts.push(finalChar);
+        i = closeParenIndex + 1;
+        continue;
+      }
+      
+      // Check for predefined character classes
+      let foundPattern = false;
+      const sortedPatterns = Object.entries(this.charClasses).sort((a, b) => b[0].length - a[0].length);
+      
+      for (const [pattern, replacement] of sortedPatterns) {
+        if (requirement.substring(i).startsWith(pattern)) {
+          // For lookahead, use the replacement directly
+          lookaheadClass = replacement;
+          // For character class, collect the replacement
+          charClassParts.push(replacement);
+          i += pattern.length;
+          foundPattern = true;
+          break;
+        }
+      }
+      
+      if (foundPattern) {
+        continue;
+      }
+      
+      // Handle character ranges (e.g., 0-9, a-z, A-Z)
+      if (i + 2 < requirement.length && requirement[i + 1] === '-') {
+        const startChar = requirement[i];
+        const endChar = requirement[i + 2];
+        
+        // Validate range (both characters should be of the same type)
+        if (this.isValidRange(startChar, endChar)) {
+          // Handle mixed case ranges like a-E
+          if (this.isMixedCaseRange(startChar, endChar)) {
+            // For mixed case ranges, create a range that includes both cases
+            const startLower = startChar.toLowerCase();
+            const endLower = endChar.toLowerCase();
+            const rangeStr = `${startLower}-${endLower}${startChar.toUpperCase()}-${endChar.toUpperCase()}`;
+            // Properly escape the range string to prevent injection
+            const escapedRangeStr = this.escapeInCharClass(rangeStr);
+            lookaheadClass = `[${escapedRangeStr}]`;
+            charClassParts.push(rangeStr);
+          } else {
+            const rangeStr = `${startChar}-${endChar}`;
+            // Properly escape the range string to prevent injection
+            const escapedRangeStr = this.escapeInCharClass(rangeStr);
+            lookaheadClass = `[${escapedRangeStr}]`;
+            charClassParts.push(rangeStr);
+          }
+          i += 3; // Skip start, -, and end characters
+          continue;
+        }
+      }
+      
+      // Handle other characters
+      const escaped = this.escapeInCharClass(requirement[i]);
+      lookaheadClass = escaped;
+      charClassParts.push(escaped);
+      i++;
+    }
+    
+    return {
+      lookahead: lookaheadClass,
+      charClass: charClassParts.join('')
+    };
+  }
+
+  /**
+   * Fix incomplete quantifiers like {,8} to {1,8} for MUST groups
+   * @param {string} quantifier - The quantifier string
+   * @returns {string} - Fixed quantifier string
+   */
+  fixQuantifierForMustGroup(quantifier) {
+    // Handle {,n} -> {1,n} (require at least 1 match for MUST groups)
+    if (quantifier.match(/^\{,(\d+)\}$/)) {
+      const max = quantifier.match(/^\{,(\d+)\}$/)[1];
+      return `{1,${max}}`;
+    }
+    
+    // Handle {n,} -> {n,}
+    if (quantifier.match(/^\{(\d+),\}$/)) {
+      return quantifier; // This is already valid
+    }
+    
+    // Handle {n} -> {n,n}
+    if (quantifier.match(/^\{(\d+)\}$/)) {
+      const n = quantifier.match(/^\{(\d+)\}$/)[1];
+      return `{${n},${n}}`;
+    }
+    
+    // Handle {n,m} -> {n,m} (already valid)
+    if (quantifier.match(/^\{(\d+),(\d+)\}$/)) {
+      return quantifier;
+    }
+    
+    // If it doesn't match any pattern, return as-is (will be caught by regex validation)
+    return quantifier;
+  }
+
+  /**
+   * Fix incomplete quantifiers like {,8} to {0,8}
+   * @param {string} quantifier - The quantifier string
+   * @returns {string} - Fixed quantifier string
+   */
+  fixQuantifier(quantifier) {
+    // Handle {,n} -> {0,n} (allow 0 to n matches)
+    if (quantifier.match(/^\{,(\d+)\}$/)) {
+      const max = quantifier.match(/^\{,(\d+)\}$/)[1];
+      return `{0,${max}}`;
+    }
+    
+    // Handle {n,} -> {n,}
+    if (quantifier.match(/^\{(\d+),\}$/)) {
+      return quantifier; // This is already valid
+    }
+    
+    // Handle {n} -> {n,n}
+    if (quantifier.match(/^\{(\d+)\}$/)) {
+      const n = quantifier.match(/^\{(\d+)\}$/)[1];
+      return `{${n},${n}}`;
+    }
+    
+    // Handle {n,m} -> {n,m} (already valid)
+    if (quantifier.match(/^\{(\d+),(\d+)\}$/)) {
+      return quantifier;
+    }
+    
+    // If it doesn't match any pattern, return as-is (will be caught by regex validation)
+    return quantifier;
   }
 
   /**

@@ -617,4 +617,57 @@ describe('PrettyRegex Basic Functionality', () => {
       expect(() => prx.parse('string()')).not.toThrow();
     });
   });
+
+  describe('Capturing Groups with MUST Requirements', () => {
+    test('should handle capturing groups with & operator', () => {
+      const pattern = '(charU&charL&[0-9]&emoji){,8}';
+      const regex = prx.compile(pattern, 'u'); // Unicode flag needed for emoji
+      
+      // Should match: contains uppercase, lowercase, digit, and emoji
+      expect(regex.test('bAnA0🥲')).toBe(true);
+      
+      // Should not match: missing uppercase letter
+      expect(regex.test('banana🥲')).toBe(false);
+      
+      // Should not match: missing digit
+      expect(regex.test('bAnA🥲')).toBe(false);
+      
+      // Should not match: missing emoji
+      expect(regex.test('bAnA0')).toBe(false);
+      
+      // Should not match: missing lowercase letter
+      expect(regex.test('BANA0🥲')).toBe(false);
+      
+      // Should not match: too long (more than 8 characters)
+      expect(regex.test('bAnA0🥲extra')).toBe(false);
+    });
+
+    test('should handle capturing groups with & operator and quantifiers', () => {
+      const pattern = '(charU&charL&[0-9])+';
+      const regex = prx.compile(pattern);
+      
+      // Should match: contains all required character types
+      expect(regex.test('aB1')).toBe(true);
+      expect(regex.test('aB1cD2')).toBe(true);
+      
+      // Should not match: missing any required type
+      expect(regex.test('ab1')).toBe(false); // missing uppercase
+      expect(regex.test('AB1')).toBe(false); // missing lowercase
+      expect(regex.test('aBc')).toBe(false); // missing digit
+    });
+
+    test('should handle nested capturing groups with & operator', () => {
+      const pattern = '((charU&charL)&[0-9])+';
+      const regex = prx.compile(pattern);
+      
+      // Should match: nested groups work correctly
+      expect(regex.test('aB1')).toBe(true);
+      expect(regex.test('aB1cD2')).toBe(true);
+      
+      // Should not match: missing any required type
+      expect(regex.test('ab1')).toBe(false); // missing uppercase
+      expect(regex.test('AB1')).toBe(false); // missing lowercase
+      expect(regex.test('aBc')).toBe(false); // missing digit
+    });
+  });
 }); 

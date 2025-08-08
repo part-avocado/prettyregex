@@ -9,12 +9,41 @@
 
 Transform complex regular expressions into readable, maintainable code. PRX-RegEx provides a simplified syntax that makes regex patterns accessible to everyone.
 
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+  - [Installation](#installation)
+  - [Basic Usage](#basic-usage)
+  - [Advanced Usage with Validation](#advanced-usage-with-validation)
+  - [Capturing Groups with MUST Requirements](#capturing-groups-with-must-requirements)
+- [Syntax Guide](#syntax-guide)
+  - [Character Classes](#character-classes)
+  - [Character Ranges](#character-ranges)
+  - [Operators](#operators)
+  - [Capturing Groups](#capturing-groups)
+  - [Quantifiers](#quantifiers)
+  - [Anchors and Boundaries](#anchors-and-boundaries)
+  - [Literal Characters](#literal-characters)
+  - [String Matching](#string-matching)
+- [Real-World Examples](#real-world-examples)
+- [API Reference](#api-reference)
+- [Error Handling](#error-handling)
+- [Best Practices](#best-practices)
+- [Advanced Features](#advanced-features)
+- [Testing](#testing)
+- [Installation](#installation-1)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Features
 
 - **Human-readable syntax** - Write `[charU+charL+0-9]+` instead of `[A-Za-z0-9]+`
 - **MUST requirements** - Use `&` to enforce all character types: `[charU&charL&0-9]`
+- **Capturing groups** - Use `&` in groups to enforce requirements: `(charU&charL&[0-9]&emoji){,8}`
 - **Union operations** - Use `+` for traditional union: `[charU+charL+0-9]`
 - **Character ranges** - Support for `[0-9]`, `[a-z]`, `[a-E]` (mixed case)
+- **String matching** - Powerful `string()` function with case sensitivity options
 - **Production-ready** - Comprehensive error handling and validation
 - **Debug tools** - Built-in debugging and performance analysis
 - **TypeScript support** - Full type definitions included
@@ -62,6 +91,20 @@ try {
 }
 ```
 
+### Capturing Groups with MUST Requirements
+
+```javascript
+// Username with requirements: 1-8 characters, must contain uppercase, lowercase, digit, and emoji
+const username = '(charU&charL&[0-9]&emoji){,8}';
+const regex = prx.compile(username, 'u'); // Unicode flag needed for emoji
+
+console.log(regex.test('bAnA0🥲')); // true - contains all required types
+console.log(regex.test('banana🥲')); // false - missing uppercase
+console.log(regex.test('bAnA🥲')); // false - missing digit
+console.log(regex.test('bAnA0')); // false - missing emoji
+console.log(regex.test('BANA0🥲')); // false - missing lowercase
+```
+
 ## Syntax Guide
 
 ### Character Classes
@@ -78,6 +121,7 @@ try {
 | `whitespace` | `\s` | Any whitespace |
 | `wordchar` | `\w` | Word characters |
 | `any` | `.` | Any character |
+| `emoji` | `[\u{1F600}-\u{1F64F}]` | Basic emoji range |
 | `string(text)` | `text` | Exact string match |
 | `string(text, caseinsensitive)` | `text` (with `i` flag) | Case insensitive match |
 | `string(text, multicase)` | `[tT][eE][xX][tT]` | All case variations |
@@ -115,6 +159,46 @@ const username = '[charU+charL+0-9+char(_)]{3,20}';
 console.log(PrettyRegex.test(username, 'user123')); // true
 console.log(PrettyRegex.test(username, 'user_name')); // true
 ```
+
+### Capturing Groups
+
+#### Basic Groups
+Use parentheses to create capturing groups:
+
+```javascript
+// Simple group with quantifier
+const pattern = '(charU+charL){3,5}';
+console.log(PrettyRegex.test(pattern, 'ABC')); // true
+console.log(PrettyRegex.test(pattern, 'AB')); // false (too short)
+```
+
+#### Groups with MUST Requirements (`&`)
+Use `&` operator in groups to enforce that the matched portion contains all required character types:
+
+```javascript
+// Username: 1-8 characters, must contain uppercase, lowercase, digit, and emoji
+const username = '(charU&charL&[0-9]&emoji){,8}';
+const regex = PrettyRegex.compile(username, 'u'); // Unicode flag needed for emoji
+
+console.log(regex.test('bAnA0🥲')); // true - contains all required types
+console.log(regex.test('banana🥲')); // false - missing uppercase
+console.log(regex.test('bAnA🥲')); // false - missing digit
+console.log(regex.test('bAnA0')); // false - missing emoji
+console.log(regex.test('BANA0🥲')); // false - missing lowercase
+```
+
+#### Nested Groups
+Groups can be nested and combined with other operators:
+
+```javascript
+// Nested groups with MUST requirements
+const pattern = '((charU&charL)&[0-9])+';
+console.log(PrettyRegex.test(pattern, 'aB1')); // true
+console.log(PrettyRegex.test(pattern, 'ab1')); // false - missing uppercase
+console.log(PrettyRegex.test(pattern, 'AB1')); // false - missing lowercase
+```
+
+**Note:** When using `&` operator in groups with quantifiers like `{,n}`, the quantifier is automatically adjusted to require at least 1 match (`{1,n}`) to ensure the MUST requirements are meaningful.
 
 ### Quantifiers
 
@@ -218,6 +302,23 @@ console.log(PrettyRegex.test(emailCI, 'user@EXAMPLE.COM')); // true
 console.log(PrettyRegex.test(emailCI, 'user@Example.Com')); // true
 ```
 
+### Username Validation with Capturing Groups
+
+```javascript
+// Username: 3-15 characters, must contain at least one letter and one digit
+const username = '(charU+charL+[0-9]&charU+charL&[0-9]){3,15}';
+console.log(PrettyRegex.test(username, 'user123')); // true
+console.log(PrettyRegex.test(username, 'user')); // false (missing digit)
+console.log(PrettyRegex.test(username, '123')); // false (missing letter)
+
+// Gaming username: 2-12 characters, must contain uppercase, lowercase, and emoji
+const gamingUsername = '(charU&charL&emoji){2,12}';
+const regex = PrettyRegex.compile(gamingUsername, 'u');
+console.log(regex.test('Gamer🥲')); // true
+console.log(regex.test('gamer🥲')); // false (missing uppercase)
+console.log(regex.test('GAMER🥲')); // false (missing lowercase)
+```
+
 ### URL Validation
 
 ```javascript
@@ -287,6 +388,8 @@ console.log(PrettyRegex.test(greetings, 'hElLo')); // true
 console.log(PrettyRegex.test(greetings, 'Hi')); // true
 console.log(PrettyRegex.test(greetings, 'Goodbye')); // false
 ```
+
+## API Reference
 
 ### PrettyRegex Class
 
@@ -371,6 +474,57 @@ try {
   console.log(error.code); // Error code for programmatic handling
   console.log(error.details); // Additional error details
 }
+```
+
+### Common Error Types
+
+| Error Type | Description | Example |
+|------------|-------------|---------|
+| `ParseError` | General parsing errors | Invalid syntax |
+| `ValidationError` | Pattern validation failures | Unsupported features |
+| `CharacterClassError` | Character class issues | Unclosed brackets |
+| `QuantifierError` | Quantifier problems | Invalid ranges |
+| `RangeError` | Range validation errors | Invalid character ranges |
+
+## Best Practices
+
+### Pattern Design Tips
+
+1. **Use descriptive patterns**: Instead of `[A-Za-z0-9]+`, use `[charU+charL+0-9]+`
+2. **Leverage MUST requirements**: Use `&` operator for validation patterns
+3. **Group related requirements**: Use capturing groups to organize complex patterns
+4. **Test edge cases**: Always test with empty strings, special characters, and boundary conditions
+
+### Performance Considerations
+
+```javascript
+// Good: Specific character classes
+const good = '[charU+charL]{3,10}';
+
+// Avoid: Overly broad patterns
+const avoid = 'any{3,10}';
+
+// Good: Use anchors for exact matches
+const exact = 'start[charU+charL]+end';
+
+// Avoid: Patterns that can match anywhere
+const anywhere = '[charU+charL]+';
+```
+
+### Common Patterns
+
+```javascript
+// Email validation
+const email = '[charU+charL+0-9+char(.)+char(_)+char(-)]+char(@)[charU+charL+0-9+char(.)+char(-)]+char(.)[charL]{2,}';
+
+// Strong password
+const password = '[charU&charL&0-9&char(!@#$%^&*)]{8,}';
+
+// Username with requirements
+const username = '(charU+charL+[0-9]&charU+charL&[0-9]){3,15}';
+
+// Phone number
+const phone = 'char(\\()0-9{3}char(\\))char( )0-9{3}char(-)0-9{4}';
 ```
 
 ## Advanced Features
