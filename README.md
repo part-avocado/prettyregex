@@ -5,8 +5,6 @@
 ![NPM Version](https://img.shields.io/npm/v/prx-regex?label=Latest%20NPM%20Release)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-> **Human-readable regular expressions** - Write complex regex patterns using simple, intuitive syntax
-
 Transform complex regular expressions into readable, maintainable code. PRX-RegEx provides a simplified syntax that makes regex patterns accessible to everyone.
 
 ## Features
